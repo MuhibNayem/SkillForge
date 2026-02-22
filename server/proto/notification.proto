@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package notification.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/notification;notificationpb";
+
+service NotificationService {
+  rpc UpdatePreferences (UpdatePreferencesRequest) returns (PreferencesResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/notifications/preferences"
+      body: "*"
+    };
+  }
+
+  rpc GetPreferences (GetPreferencesRequest) returns (PreferencesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/notifications/preferences"
+    };
+  }
+}
+
+message UserPreferences {
+  string user_id = 1;
+  bool email_course_updates = 2;
+  bool email_marketing = 3;
+  bool in_app_mentions = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message UpdatePreferencesRequest {
+  string user_id = 1;
+  bool email_course_updates = 2;
+  bool email_marketing = 3;
+  bool in_app_mentions = 4;
+}
+
+message GetPreferencesRequest {
+  string user_id = 1;
+}
+
+message PreferencesResponse {
+  UserPreferences preferences = 1;
+}

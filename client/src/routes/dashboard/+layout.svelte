@@ -1,8 +1,21 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/state";
     import { auth, logout } from "$lib/stores/auth";
     let { children } = $props();
     let sidebarOpen = $state(true);
+
+    // Auth guard — redirect to login if not authenticated
+    $effect(() => {
+        if (!$auth.isLoading && !$auth.isAuthenticated) {
+            goto("/login");
+        }
+    });
+
+    function isActive(href: string) {
+        if (href === "/dashboard") return page.url.pathname === "/dashboard";
+        return page.url.pathname.startsWith(href);
+    }
 
     async function handleLogout() {
         await logout();
@@ -27,30 +40,22 @@
         </div>
 
         <nav class="flex-1 p-4 space-y-1">
-            <a
-                href="/dashboard"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-surface-200 hover:bg-surface-800/50 hover:text-surface-100 transition-all text-sm font-medium"
-            >
-                <span>📊</span> Dashboard
-            </a>
-            <a
-                href="/dashboard/courses"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-surface-200 hover:bg-surface-800/50 hover:text-surface-100 transition-all text-sm font-medium"
-            >
-                <span>📚</span> Courses
-            </a>
-            <a
-                href="/dashboard/my-courses"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-surface-200 hover:bg-surface-800/50 hover:text-surface-100 transition-all text-sm font-medium"
-            >
-                <span>🎓</span> My Learning
-            </a>
-            <a
-                href="/dashboard/create"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-surface-200 hover:bg-surface-800/50 hover:text-surface-100 transition-all text-sm font-medium"
-            >
-                <span>✏️</span> Create Course
-            </a>
+            {#each [
+                { href: '/dashboard', icon: '📊', label: 'Dashboard', roles: null },
+                { href: '/dashboard/courses', icon: '📚', label: 'Courses', roles: null },
+                { href: '/dashboard/my-courses', icon: '🎓', label: 'My Learning', roles: null },
+                { href: '/dashboard/create', icon: '✏️', label: 'Create Course', roles: ['instructor', 'tenant_admin', 'super_admin'] },
+            ].filter(link => !link.roles || (!!$auth.user && link.roles.includes($auth.user.role))) as link}
+                <a
+                    href={link.href}
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium
+                        {isActive(link.href)
+                            ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
+                            : 'text-surface-200 hover:bg-surface-800/50 hover:text-surface-100'}"
+                >
+                    <span>{link.icon}</span> {link.label}
+                </a>
+            {/each}
         </nav>
 
         <div class="p-4 border-t border-surface-700/50">

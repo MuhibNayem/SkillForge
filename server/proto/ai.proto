@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package ai.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/ai;aipb";
+
+// Note: This service is implemented in Python/FastAPI, not Go.
+// The gRPC interface is defined here to maintain contract consistency
+// and allow Go services to call the AI service via gRPC if needed, 
+// though the primary access pattern is HTTP REST via Kong.
+
+service AIService {
+  rpc RecommendCourses (RecommendationRequest) returns (RecommendationResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/recommendations"
+      body: "*"
+    };
+  }
+
+  rpc TagContent (TagContentRequest) returns (TagContentResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/content/tag"
+      body: "*"
+    };
+  }
+
+  rpc SummarizeCourse (SummarizeCourseRequest) returns (SummarizeCourseResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/content/summarize"
+      body: "*"
+    };
+  }
+}
+
+message RecommendationRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  repeated string completed_course_ids = 3;
+  repeated string skills_of_interest = 4;
+  int32 limit = 5;
+}
+
+message RecommendedCourse {
+  string course_id = 1;
+  string title = 2;
+  string match_reason = 3;
+  double confidence_score = 4;
+}
+
+message RecommendationResponse {
+  repeated RecommendedCourse recommendations = 1;
+}
+
+message TagContentRequest {
+  string content_text = 1;
+  string content_title = 2;
+}
+
+message TagContentResponse {
+  repeated string categories = 1;
+  string difficulty_level = 2;
+  repeated string keywords = 3;
+}
+
+message SummarizeCourseRequest {
+  string course_title = 1;
+  repeated string lesson_titles = 2;
+  string instructor_notes = 3;
+}
+
+message SummarizeCourseResponse {
+  string summary = 1;
+  string learning_objectives = 2;
+}

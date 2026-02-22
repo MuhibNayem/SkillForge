@@ -1,6 +1,6 @@
 .PHONY: proto-gen proto-install build test migrate-create migrate-up migrate-down frontend-install frontend-build frontend-dev
 
-SERVICES := auth user tenant course content enrollment
+SERVICES := auth user tenant course content enrollment assessment certification
 DB_URL ?= "postgres://learnhub:password@localhost:5432/learnhub?sslmode=disable"
 
 # ============================================================
@@ -24,7 +24,7 @@ proto-gen:
 		protoc \
 			--go_out=shared --go_opt=module=github.com/amnayem/skillforge/shared \
 			--go-grpc_out=shared --go-grpc_opt=module=github.com/amnayem/skillforge/shared \
-			"$$proto"; \
+			-I. -I./proto "$$proto"; \
 	done
 	@echo "Done. Generated code is in server/shared/pb/*/"
 

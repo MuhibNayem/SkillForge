@@ -3,11 +3,13 @@ module github.com/amnayem/skillforge/shared
 go 1.25.3
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rs/zerolog v1.34.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
 	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
 )

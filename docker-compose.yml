@@ -59,6 +59,22 @@ services:
       timeout: 20s
       retries: 3
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -134,9 +150,131 @@ services:
       - "8001:8001"
       - "8444:8444"
 
+  auth-service:
+    build:
+      context: ./server
+      dockerfile: services/auth/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      REDIS_ADDR: redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./server
+      dockerfile: services/user/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  tenant-service:
+    build:
+      context: ./server
+      dockerfile: services/tenant/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  course-service:
+    build:
+      context: ./server
+      dockerfile: services/course/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  content-service:
+    build:
+      context: ./server
+      dockerfile: services/content/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      MONGO_URI: mongodb://admin:password@mongodb:27017
+      MINIO_URL: http://minio:9000
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+  enrollment-service:
+    build:
+      context: ./server
+      dockerfile: services/enrollment/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  assessment-service:
+    build:
+      context: ./server
+      dockerfile: services/assessment/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  certification-service:
+    build:
+      context: ./server
+      dockerfile: services/certification/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      MINIO_URL: http://minio:9000
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
   mongodb_data:
   minio_data:
   kong_data:
+  elasticsearch_data:

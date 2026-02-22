@@ -49,6 +49,12 @@ services:
       - name: grpc-gateway
         config:
           proto: /opt/kong/proto/user.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
       - name: cors
         config:
           origins:
@@ -76,6 +82,168 @@ services:
       - name: grpc-gateway
         config:
           proto: /opt/kong/proto/course.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
+
+  - name: content-service
+    url: grpc://content-service:9090
+    routes:
+      - name: content-rest-proxy
+        paths:
+          - /api/v1/content
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/content.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
+
+  - name: enrollment-service
+    url: grpc://enrollment-service:9090
+    routes:
+      - name: enrollment-rest-proxy
+        paths:
+          - /api/v1/enrollments
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/enrollment.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
+
+  - name: tenant-service
+    url: grpc://tenant-service:9090
+    routes:
+      - name: tenant-rest-proxy
+        paths:
+          - /api/v1/tenants
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/tenant.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
+
+  - name: assessment-service
+    url: grpc://assessment-service:9090
+    routes:
+      - name: assessment-rest-proxy
+        paths:
+          - /api/v1/assessments
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/assessment.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
+
+  - name: certification-service
+    url: grpc://certification-service:9090
+    routes:
+      - name: certification-rest-proxy
+        paths:
+          - /api/v1/certificates
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/certification.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
+
+  - name: notification-service
+    url: grpc://notification-service:9090
+    routes:
+      - name: notification-rest-proxy
+        paths:
+          - /api/v1/notifications
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/notification.proto
+
+  - name: analytics-service
+    url: grpc://analytics-service:9090
+    routes:
+      - name: analytics-rest-proxy
+        paths:
+          - /api/v1/analytics
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/analytics.proto
+
+  - name: search-service
+    url: grpc://search-service:9090
+    routes:
+      - name: search-rest-proxy
+        paths:
+          - /api/v1/search
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/search.proto
+
+  - name: ai-service
+    url: grpc://ai-service:9090
+    routes:
+      - name: ai-rest-proxy
+        paths:
+          - /api/v1/ai
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: grpc-gateway
+        config:
+          proto: /opt/kong/proto/ai.proto
 
 plugins:
   - name: rate-limiting

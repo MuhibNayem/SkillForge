@@ -7,7 +7,16 @@ import (
 
 	enrollment "github.com/amnayem/skillforge/services/enrollment"
 	"github.com/amnayem/skillforge/shared/pb/enrollmentpb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 )
+
+func newAuthCtx(role, userID, tenantID string) context.Context {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, auth.RoleKey, role)
+	ctx = context.WithValue(ctx, auth.UserIDKey, userID)
+	ctx = context.WithValue(ctx, auth.TenantIDKey, tenantID)
+	return ctx
+}
 
 type mockRepo struct {
 	enrollments map[string]enrollment.EnrollmentRecord
@@ -80,8 +89,9 @@ func (m *mockRepo) RecalculateOverallProgress(ctx context.Context, enrollmentID 
 
 func TestEnroll(t *testing.T) {
 	h := enrollment.NewHandler(newMockRepo())
-	resp, err := h.Enroll(context.Background(), &enrollmentpb.EnrollRequest{
-		UserId: "u-1", CourseId: "c-1", TenantId: "t-1",
+	ctx := newAuthCtx("student", "u-1", "t-1")
+	resp, err := h.Enroll(ctx, &enrollmentpb.EnrollRequest{
+		CourseId: "c-1",
 	})
 	if err != nil {
 		t.Fatalf("Enroll failed: %v", err)
@@ -94,12 +104,9 @@ func TestEnroll(t *testing.T) {
 func TestEnroll_Duplicate(t *testing.T) {
 	repo := newMockRepo()
 	h := enrollment.NewHandler(repo)
-	_, _ = h.Enroll(context.Background(), &enrollmentpb.EnrollRequest{
-		UserId: "u-1", CourseId: "c-1", TenantId: "t-1",
-	})
-	_, err := h.Enroll(context.Background(), &enrollmentpb.EnrollRequest{
-		UserId: "u-1", CourseId: "c-1", TenantId: "t-1",
-	})
+	ctx := newAuthCtx("student", "u-1", "t-1")
+	_, _ = h.Enroll(ctx, &enrollmentpb.EnrollRequest{CourseId: "c-1"})
+	_, err := h.Enroll(ctx, &enrollmentpb.EnrollRequest{CourseId: "c-1"})
 	if err == nil {
 		t.Error("expected error for duplicate enrollment")
 	}
@@ -107,7 +114,7 @@ func TestEnroll_Duplicate(t *testing.T) {
 
 func TestEnroll_MissingFields(t *testing.T) {
 	h := enrollment.NewHandler(newMockRepo())
-	_, err := h.Enroll(context.Background(), &enrollmentpb.EnrollRequest{})
+	_, err := h.Enroll(newAuthCtx("student", "u-1", "t-1"), &enrollmentpb.EnrollRequest{})
 	if err == nil {
 		t.Error("expected error for missing fields")
 	}
@@ -116,8 +123,8 @@ func TestEnroll_MissingFields(t *testing.T) {
 func TestUpdateProgress(t *testing.T) {
 	repo := newMockRepo()
 	h := enrollment.NewHandler(repo)
-	enrolled, _ := h.Enroll(context.Background(), &enrollmentpb.EnrollRequest{
-		UserId: "u-1", CourseId: "c-1", TenantId: "t-1",
+	enrolled, _ := h.Enroll(newAuthCtx("student", "u-1", "t-1"), &enrollmentpb.EnrollRequest{
+		CourseId: "c-1",
 	})
 	resp, err := h.UpdateProgress(context.Background(), &enrollmentpb.UpdateProgressRequest{
 		EnrollmentId: enrolled.EnrollmentId, LessonId: "l-1", PercentComplete: 75,

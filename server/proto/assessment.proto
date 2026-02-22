@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package assessment.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/assessment;assessmentpb";
+
+service AssessmentService {
+  rpc CreateAssessment (CreateAssessmentRequest) returns (Assessment) {
+    option (google.api.http) = {
+      post: "/api/v1/assessments"
+      body: "*"
+    };
+  }
+
+  rpc GetAssessment (GetAssessmentRequest) returns (Assessment) {
+    option (google.api.http) = {
+      get: "/api/v1/assessments/{id}"
+    };
+  }
+
+  rpc SubmitAssessment (SubmitAssessmentRequest) returns (SubmissionResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/assessments/{assessment_id}/submissions"
+      body: "*"
+    };
+  }
+
+  rpc GetGrade (GetGradeRequest) returns (GradeResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/assessments/{assessment_id}/submissions/{submission_id}/grade"
+    };
+  }
+}
+
+message Assessment {
+  string id = 1;
+  string tenant_id = 2;
+  string lesson_id = 3;
+  string title = 4;
+  string description = 5;
+  int32 passing_score_percentage = 6;
+  repeated Question questions = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message Question {
+  string id = 1;
+  string type = 2; // "multiple_choice", "true_false", "short_answer", "essay"
+  string text = 3;
+  repeated string options = 4; // for multiple choice
+  string correct_answer = 5; // for auto-grading
+  int32 points = 6;
+}
+
+message CreateAssessmentRequest {
+  string lesson_id = 1;
+  string title = 2;
+  string description = 3;
+  int32 passing_score_percentage = 4;
+  repeated Question questions = 5;
+}
+
+message GetAssessmentRequest {
+  string id = 1;
+}
+
+message SubmitAssessmentRequest {
+  string assessment_id = 1;
+  repeated Answer answers = 2;
+}
+
+message Answer {
+  string question_id = 1;
+  string answer_text = 2;
+}
+
+message SubmissionResponse {
+  string submission_id = 1;
+  string status = 2; // "graded", "pending_review"
+}
+
+message GetGradeRequest {
+  string assessment_id = 1;
+  string submission_id = 2;
+}
+
+message GradeResponse {
+  string submission_id = 1;
+  int32 total_points = 2;
+  int32 earned_points = 3;
+  bool passed = 4;
+  string feedback = 5;
+}

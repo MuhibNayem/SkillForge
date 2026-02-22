@@ -33,14 +33,15 @@ export async function initAuth() {
 }
 
 export async function login(email: string, password: string) {
-    const data = await api.auth.login(email, password);
-    // Server sets httpOnly cookies — we just update local state
+    await api.auth.login(email, password);
+    // Server sets httpOnly cookies — fetch full profile so tenantId and role are populated from JWT
+    const me = await api.auth.me();
     auth.set({
-        user: { userId: data.user_id, email: data.email, role: data.role as User['role'], tenantId: '' },
+        user: { userId: me.user_id, email: me.email, role: me.role as User['role'], tenantId: me.tenant_id },
         isAuthenticated: true,
         isLoading: false,
     });
-    return data;
+    return me;
 }
 
 export async function logout() {

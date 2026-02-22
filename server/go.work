@@ -1,11 +1,13 @@
 go 1.25.3
 
 use (
-	./shared
+	./services/assessment
 	./services/auth
-	./services/user
-	./services/tenant
-	./services/course
+	./services/certification
 	./services/content
+	./services/course
 	./services/enrollment
+	./services/tenant
+	./services/user
+	./shared
 )

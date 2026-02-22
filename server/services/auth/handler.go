@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -56,7 +58,8 @@ func (h *Handler) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.
 	user, err := h.repo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
-			return nil, status.Errorf(codes.NotFound, "invalid credentials")
+			// Return Unauthenticated (not NotFound) to avoid leaking whether the email exists
+			return nil, status.Errorf(codes.Unauthenticated, "invalid credentials")
 		}
 		return nil, status.Errorf(codes.Internal, "fetch user: %v", err)
 	}
@@ -80,9 +83,15 @@ func (h *Handler) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.
 		return nil, status.Errorf(codes.Internal, "sign token: %v", err)
 	}
 
-	// Store refresh token in Redis (7 days TTL)
-	refreshToken := "refresh-" + user.ID + "-" + time.Now().Format("20060102150405")
-	_ = h.repo.StoreRefreshToken(ctx, user.ID, refreshToken, 7*24*time.Hour)
+	// Store refresh token in Redis (7 days TTL) — use cryptographically random bytes
+	rtBytes := make([]byte, 32)
+	if _, err := rand.Read(rtBytes); err != nil {
+		return nil, status.Errorf(codes.Internal, "generate refresh token: %v", err)
+	}
+	refreshToken := hex.EncodeToString(rtBytes)
+	if err := h.repo.StoreRefreshToken(ctx, user.ID, refreshToken, 7*24*time.Hour); err != nil {
+		return nil, status.Errorf(codes.Internal, "store refresh token: %v", err)
+	}
 
 	return &authpb.LoginResponse{
 		AccessToken:  accessToken,

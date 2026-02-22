@@ -38,10 +38,12 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 
 func (r *PostgresRepository) Create(ctx context.Context, name, domain, adminEmail string) (TenantRecord, error) {
 	var t TenantRecord
+	// adminEmail is stored in the metadata JSON column for auditing; the actual admin user
+	// is provisioned separately via the User/Auth service after tenant creation.
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO tenants (name, domain) VALUES ($1, $2)
+		`INSERT INTO tenants (name, domain, metadata) VALUES ($1, $2, jsonb_build_object('admin_email', $3::text))
 		 RETURNING id, name, domain, status, theme, logo_url, created_at, updated_at`,
-		name, domain,
+		name, domain, adminEmail,
 	).Scan(&t.ID, &t.Name, &t.Domain, &t.Status, &t.Theme, &t.LogoURL, &t.CreatedAt, &t.UpdatedAt)
 	return t, err
 }

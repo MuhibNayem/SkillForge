@@ -7,7 +7,18 @@ import (
 
 	course "github.com/amnayem/skillforge/services/course"
 	"github.com/amnayem/skillforge/shared/pb/coursepb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 )
+
+// newAuthCtx returns a context with role, user_id, and tenant_id injected
+// as the gRPC interceptor would do in production.
+func newAuthCtx(role, userID, tenantID string) context.Context {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, auth.RoleKey, role)
+	ctx = context.WithValue(ctx, auth.UserIDKey, userID)
+	ctx = context.WithValue(ctx, auth.TenantIDKey, tenantID)
+	return ctx
+}
 
 type mockRepo struct {
 	courses map[string]course.CourseRecord
@@ -113,9 +124,9 @@ func (m *mockRepo) GetLessons(ctx context.Context, moduleID string) ([]course.Le
 
 func TestCreateCourse(t *testing.T) {
 	h := course.NewHandler(newMockRepo())
-	resp, err := h.CreateCourse(context.Background(), &coursepb.CreateCourseRequest{
+	ctx := newAuthCtx("instructor", "inst-1", "t1")
+	resp, err := h.CreateCourse(ctx, &coursepb.CreateCourseRequest{
 		Title: "Test Course", Description: "Desc", Category: "AI", Difficulty: "beginner",
-		InstructorId: "inst-1", TenantId: "t1",
 	})
 	if err != nil {
 		t.Fatalf("CreateCourse failed: %v", err)
@@ -127,7 +138,7 @@ func TestCreateCourse(t *testing.T) {
 
 func TestCreateCourse_EmptyTitle(t *testing.T) {
 	h := course.NewHandler(newMockRepo())
-	_, err := h.CreateCourse(context.Background(), &coursepb.CreateCourseRequest{})
+	_, err := h.CreateCourse(newAuthCtx("instructor", "inst-1", "t1"), &coursepb.CreateCourseRequest{})
 	if err == nil {
 		t.Error("expected error for empty title")
 	}
@@ -136,10 +147,11 @@ func TestCreateCourse_EmptyTitle(t *testing.T) {
 func TestPublishCourse(t *testing.T) {
 	repo := newMockRepo()
 	h := course.NewHandler(repo)
-	created, _ := h.CreateCourse(context.Background(), &coursepb.CreateCourseRequest{
-		Title: "Pub Course", TenantId: "t1", InstructorId: "i1",
+	ctx := newAuthCtx("instructor", "inst-1", "t1")
+	created, _ := h.CreateCourse(ctx, &coursepb.CreateCourseRequest{
+		Title: "Pub Course",
 	})
-	resp, err := h.PublishCourse(context.Background(), &coursepb.PublishCourseRequest{CourseId: created.CourseId})
+	resp, err := h.PublishCourse(ctx, &coursepb.PublishCourseRequest{CourseId: created.CourseId})
 	if err != nil {
 		t.Fatalf("PublishCourse failed: %v", err)
 	}
@@ -150,7 +162,7 @@ func TestPublishCourse(t *testing.T) {
 
 func TestAddModule(t *testing.T) {
 	h := course.NewHandler(newMockRepo())
-	resp, err := h.AddModule(context.Background(), &coursepb.AddModuleRequest{
+	resp, err := h.AddModule(newAuthCtx("instructor", "inst-1", "t1"), &coursepb.AddModuleRequest{
 		CourseId: "c-1", Title: "Module 1", Order: 1,
 	})
 	if err != nil {
@@ -163,7 +175,7 @@ func TestAddModule(t *testing.T) {
 
 func TestAddLesson(t *testing.T) {
 	h := course.NewHandler(newMockRepo())
-	resp, err := h.AddLesson(context.Background(), &coursepb.AddLessonRequest{
+	resp, err := h.AddLesson(newAuthCtx("instructor", "inst-1", "t1"), &coursepb.AddLessonRequest{
 		CourseId: "c-1", ModuleId: "m-1", Title: "Intro", Type: "video", Order: 1,
 	})
 	if err != nil {

@@ -93,6 +93,19 @@ export const api = {
         updateProgress: (id: string, lessonId: string, percent: number) =>
             http.put(`/enrollments/${id}/progress`, { lesson_id: lessonId, percent_complete: percent }).then((r) => r.data),
     },
+    content: {
+        upload: (data: { filename: string; content_type: string; size_bytes: number; tenant_id: string; course_id: string; uploaded_by: string }) =>
+            http.post('/content/upload', data).then((r) => r.data),
+        get: (id: string) => http.get(`/content/${id}`).then((r) => r.data),
+        delete: (id: string) => http.delete(`/content/${id}`).then((r) => r.data),
+        list: (tenantId: string, courseId?: string) =>
+            http.get('/content', { params: { tenant_id: tenantId, course_id: courseId } }).then((r) => r.data),
+    },
+    tenant: {
+        get: (id: string) => http.get(`/tenants/${id}`).then((r) => r.data),
+        updateSettings: (id: string, data: { theme?: string; logo_url?: string }) =>
+            http.put(`/tenants/${id}/settings`, data).then((r) => r.data),
+    },
 };
 
 export default http;

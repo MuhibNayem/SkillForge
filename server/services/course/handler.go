@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/amnayem/skillforge/shared/pb/coursepb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,10 +20,16 @@ func NewHandler(repo Repository) *Handler {
 }
 
 func (h *Handler) CreateCourse(ctx context.Context, req *coursepb.CreateCourseRequest) (*coursepb.CourseResponse, error) {
+	if err := auth.RequireRole(ctx, "instructor", "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.Title == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "title is required")
 	}
-	c, err := h.repo.Create(ctx, req.TenantId, req.InstructorId, req.Title, req.Description, req.Category, req.Difficulty)
+	// Override tenant_id and instructor_id from the verified JWT claims
+	tenantID, _ := auth.GetTenantID(ctx)
+	instructorID, _ := auth.GetUserID(ctx)
+	c, err := h.repo.Create(ctx, tenantID, instructorID, req.Title, req.Description, req.Category, req.Difficulty)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "create course: %v", err)
 	}
@@ -59,6 +66,9 @@ func (h *Handler) GetCourse(ctx context.Context, req *coursepb.GetCourseRequest)
 }
 
 func (h *Handler) UpdateCourse(ctx context.Context, req *coursepb.UpdateCourseRequest) (*coursepb.CourseResponse, error) {
+	if err := auth.RequireRole(ctx, "instructor", "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.CourseId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "course_id is required")
 	}
@@ -73,6 +83,9 @@ func (h *Handler) UpdateCourse(ctx context.Context, req *coursepb.UpdateCourseRe
 }
 
 func (h *Handler) DeleteCourse(ctx context.Context, req *coursepb.DeleteCourseRequest) (*coursepb.DeleteCourseResponse, error) {
+	if err := auth.RequireRole(ctx, "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.CourseId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "course_id is required")
 	}
@@ -98,6 +111,9 @@ func (h *Handler) ListCourses(ctx context.Context, req *coursepb.ListCoursesRequ
 }
 
 func (h *Handler) PublishCourse(ctx context.Context, req *coursepb.PublishCourseRequest) (*coursepb.CourseResponse, error) {
+	if err := auth.RequireRole(ctx, "instructor", "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.CourseId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "course_id is required")
 	}
@@ -112,6 +128,9 @@ func (h *Handler) PublishCourse(ctx context.Context, req *coursepb.PublishCourse
 }
 
 func (h *Handler) AddModule(ctx context.Context, req *coursepb.AddModuleRequest) (*coursepb.ModuleResponse, error) {
+	if err := auth.RequireRole(ctx, "instructor", "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.CourseId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "course_id is required")
 	}
@@ -123,6 +142,9 @@ func (h *Handler) AddModule(ctx context.Context, req *coursepb.AddModuleRequest)
 }
 
 func (h *Handler) AddLesson(ctx context.Context, req *coursepb.AddLessonRequest) (*coursepb.LessonResponse, error) {
+	if err := auth.RequireRole(ctx, "instructor", "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.CourseId == "" || req.ModuleId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "course_id and module_id are required")
 	}

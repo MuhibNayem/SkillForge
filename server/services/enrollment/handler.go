@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/amnayem/skillforge/shared/pb/enrollmentpb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,10 +20,19 @@ func NewHandler(repo Repository) *Handler {
 }
 
 func (h *Handler) Enroll(ctx context.Context, req *enrollmentpb.EnrollRequest) (*enrollmentpb.EnrollmentResponse, error) {
-	if req.UserId == "" || req.CourseId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "user_id and course_id are required")
+	if req.CourseId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "course_id is required")
 	}
-	e, err := h.repo.Enroll(ctx, req.TenantId, req.UserId, req.CourseId)
+	// Always use the authenticated caller's identity — never trust the request body for user/tenant ID
+	userID, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tenantID, err := auth.GetTenantID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	e, err := h.repo.Enroll(ctx, tenantID, userID, req.CourseId)
 	if err != nil {
 		if errors.Is(err, ErrAlreadyEnrolled) {
 			return nil, status.Errorf(codes.AlreadyExists, "already enrolled")
@@ -47,7 +57,24 @@ func (h *Handler) GetEnrollment(ctx context.Context, req *enrollmentpb.GetEnroll
 }
 
 func (h *Handler) ListEnrollments(ctx context.Context, req *enrollmentpb.ListEnrollmentsRequest) (*enrollmentpb.ListEnrollmentsResponse, error) {
-	enrollments, total, err := h.repo.List(ctx, req.UserId, req.TenantId, int(req.Page), int(req.PageSize))
+	// Students always see only their own enrollments; admins may pass an explicit user_id to view others'
+	callerID, _ := auth.GetUserID(ctx)
+	callerRole, _ := auth.GetRole(ctx)
+	callerTenantID, _ := auth.GetTenantID(ctx)
+
+	userID := callerID
+	if req.UserId != "" && req.UserId != callerID {
+		// Only admins may query another user's enrollments
+		if callerRole != "tenant_admin" && callerRole != "super_admin" {
+			return nil, status.Error(codes.PermissionDenied, "cannot list another user's enrollments")
+		}
+		userID = req.UserId
+	}
+	tenantID := callerTenantID
+	if req.TenantId != "" {
+		tenantID = req.TenantId
+	}
+	enrollments, total, err := h.repo.List(ctx, userID, tenantID, int(req.Page), int(req.PageSize))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list enrollments: %v", err)
 	}

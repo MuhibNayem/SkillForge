@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package analytics.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/analytics;analyticspb";
+
+service AnalyticsService {
+  rpc GetCourseAnalytics (CourseAnalyticsRequest) returns (CourseAnalyticsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/analytics/courses/{course_id}"
+    };
+  }
+
+  rpc GetUserAnalytics (UserAnalyticsRequest) returns (UserAnalyticsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/analytics/users/{user_id}"
+    };
+  }
+
+  rpc GetTenantDashboard (TenantDashboardRequest) returns (TenantDashboardResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/analytics/tenant/{tenant_id}"
+    };
+  }
+}
+
+message CourseAnalyticsRequest {
+  string course_id = 1;
+}
+
+message CourseAnalyticsResponse {
+  int32 total_enrollments = 1;
+  int32 active_students = 2;
+  int32 completions = 3;
+  double average_progress = 4;
+}
+
+message UserAnalyticsRequest {
+  string user_id = 1;
+}
+
+message UserAnalyticsResponse {
+  int32 courses_enrolled = 1;
+  int32 courses_completed = 2;
+  int32 learning_streak_days = 3;
+  int32 total_learning_hours = 4;
+}
+
+message TenantDashboardRequest {
+  string tenant_id = 1;
+}
+
+message TenantDashboardResponse {
+  int32 total_users = 1;
+  int32 total_courses = 2;
+  int32 total_enrollments = 3;
+  int32 active_users_last_30_days = 4;
+}

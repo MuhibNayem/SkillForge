@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/amnayem/skillforge/shared/pb/userpb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,6 +20,9 @@ func NewHandler(repo Repository) *Handler {
 }
 
 func (h *Handler) CreateUser(ctx context.Context, req *userpb.CreateUserRequest) (*userpb.UserResponse, error) {
+	if err := auth.RequireRole(ctx, "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.Email == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "email is required")
 	}
@@ -62,6 +66,9 @@ func (h *Handler) UpdateUser(ctx context.Context, req *userpb.UpdateUserRequest)
 }
 
 func (h *Handler) DeleteUser(ctx context.Context, req *userpb.DeleteUserRequest) (*userpb.DeleteUserResponse, error) {
+	if err := auth.RequireRole(ctx, "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.UserId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "user_id is required")
 	}
@@ -75,6 +82,9 @@ func (h *Handler) DeleteUser(ctx context.Context, req *userpb.DeleteUserRequest)
 }
 
 func (h *Handler) ListUsers(ctx context.Context, req *userpb.ListUsersRequest) (*userpb.ListUsersResponse, error) {
+	if err := auth.RequireRole(ctx, "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	users, total, err := h.repo.List(ctx, req.TenantId, int(req.Page), int(req.PageSize))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list users: %v", err)

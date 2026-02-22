@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/amnayem/skillforge/shared/pb/tenantpb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,6 +20,9 @@ func NewHandler(repo Repository) *Handler {
 }
 
 func (h *Handler) CreateTenant(ctx context.Context, req *tenantpb.CreateTenantRequest) (*tenantpb.TenantResponse, error) {
+	if err := auth.RequireRole(ctx, "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.Name == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "name is required")
 	}
@@ -44,6 +48,9 @@ func (h *Handler) GetTenant(ctx context.Context, req *tenantpb.GetTenantRequest)
 }
 
 func (h *Handler) UpdateTenantSettings(ctx context.Context, req *tenantpb.UpdateTenantSettingsRequest) (*tenantpb.TenantResponse, error) {
+	if err := auth.RequireRole(ctx, "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.TenantId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "tenant_id is required")
 	}

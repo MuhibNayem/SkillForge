@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     status      VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'inactive')),
     theme       VARCHAR(50) DEFAULT 'default',
     logo_url    TEXT DEFAULT '',
+    metadata    JSONB NOT NULL DEFAULT '{}',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

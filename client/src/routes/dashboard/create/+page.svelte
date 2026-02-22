@@ -1,6 +1,15 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { api } from "$lib/api";
+    import { auth } from "$lib/stores/auth";
+
+    // Route guard — only instructors and admins may create courses
+    $effect(() => {
+        const role = $auth.user?.role;
+        if (!$auth.isLoading && role && !['instructor', 'tenant_admin', 'super_admin'].includes(role)) {
+            goto('/dashboard');
+        }
+    });
 
     let title = $state("");
     let description = $state("");
@@ -50,8 +59,8 @@
                 description,
                 category,
                 difficulty,
-                tenant_id: "00000000-0000-0000-0000-000000000001",
-                instructor_id: "00000000-0000-0000-0000-000000000001",
+                tenant_id: $auth.user?.tenantId ?? '',
+                instructor_id: $auth.user?.userId ?? '',
             });
 
             // Add modules and lessons via API

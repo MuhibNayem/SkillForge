@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/amnayem/skillforge/shared/pb/contentpb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -21,16 +22,22 @@ func NewHandler(repo Repository, minioURL string) *Handler {
 }
 
 func (h *Handler) UploadContent(ctx context.Context, req *contentpb.UploadContentRequest) (*contentpb.ContentResponse, error) {
+	if err := auth.RequireRole(ctx, "instructor", "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.Filename == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "filename is required")
 	}
+	// Override tenant_id and uploaded_by from verified JWT claims
+	tenantID, _ := auth.GetTenantID(ctx)
+	uploaderID, _ := auth.GetUserID(ctx)
 	rec, err := h.repo.Store(ctx, ContentRecord{
 		Filename:    req.Filename,
 		ContentType: req.ContentType,
 		SizeBytes:   req.SizeBytes,
-		TenantID:    req.TenantId,
+		TenantID:    tenantID,
 		CourseID:    req.CourseId,
-		UploadedBy:  req.UploadedBy,
+		UploadedBy:  uploaderID,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "store content: %v", err)
@@ -53,6 +60,9 @@ func (h *Handler) GetContent(ctx context.Context, req *contentpb.GetContentReque
 }
 
 func (h *Handler) DeleteContent(ctx context.Context, req *contentpb.DeleteContentRequest) (*contentpb.DeleteContentResponse, error) {
+	if err := auth.RequireRole(ctx, "instructor", "tenant_admin", "super_admin"); err != nil {
+		return nil, err
+	}
 	if req.ContentId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "content_id is required")
 	}

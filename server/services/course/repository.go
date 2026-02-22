@@ -3,6 +3,7 @@ package course
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -227,5 +228,5 @@ func (r *PostgresRepository) GetLessons(ctx context.Context, moduleID string) ([
 }
 
 func pgParamStr(n int) string {
-	return string(rune('0'+n/10)) + string(rune('0'+n%10))
+	return strconv.Itoa(n)
 }

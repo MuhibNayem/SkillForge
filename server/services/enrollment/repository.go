@@ -59,9 +59,17 @@ func (r *PostgresRepository) Enroll(ctx context.Context, tenantID, userID, cours
 		tenantID, userID, courseID,
 	).Scan(&e.ID, &e.TenantID, &e.UserID, &e.CourseID, &e.Status, &e.OverallProgress, &e.EnrolledAt, &e.CompletedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
+		// ON CONFLICT DO NOTHING returns no row — means already enrolled
 		return e, ErrAlreadyEnrolled
 	}
-	return e, err
+	if err != nil {
+		return e, err
+	}
+	if e.ID == "" {
+		// Shouldn't happen but guard anyway
+		return e, ErrAlreadyEnrolled
+	}
+	return e, nil
 }
 
 func (r *PostgresRepository) GetByID(ctx context.Context, id string) (EnrollmentRecord, error) {

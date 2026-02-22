@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package search.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/search;searchpb";
+
+service SearchService {
+  rpc GlobalSearch (GlobalSearchRequest) returns (GlobalSearchResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/search"
+    };
+  }
+}
+
+message GlobalSearchRequest {
+  string query = 1;
+  string tenant_id = 2;
+  repeated string filters = 3; // e.g., "type:course", "type:user"
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message SearchResult {
+  string id = 1;
+  string type = 2; // "course", "user", "lesson"
+  string title = 3;
+  string description = 4;
+  string url = 5;
+  double relevance_score = 6;
+}
+
+message GlobalSearchResponse {
+  repeated SearchResult results = 1;
+  int32 total_hits = 2;
+}

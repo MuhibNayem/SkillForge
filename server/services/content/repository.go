@@ -3,7 +3,6 @@ package content
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -51,7 +50,10 @@ func (r *MongoRepository) Store(ctx context.Context, rec ContentRecord) (Content
 	if err != nil {
 		return rec, err
 	}
-	rec.ID = fmt.Sprintf("%v", result.InsertedID)
+	// InsertedID is bson.ObjectID — extract the hex string
+	if oid, ok := result.InsertedID.(bson.ObjectID); ok {
+		rec.ID = oid.Hex()
+	}
 	return rec, nil
 }
 

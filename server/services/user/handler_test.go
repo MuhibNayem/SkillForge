@@ -7,7 +7,16 @@ import (
 
 	user "github.com/amnayem/skillforge/services/user"
 	"github.com/amnayem/skillforge/shared/pb/userpb"
+	"github.com/amnayem/skillforge/shared/pkg/auth"
 )
+
+func newAuthCtx(role, userID, tenantID string) context.Context {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, auth.RoleKey, role)
+	ctx = context.WithValue(ctx, auth.UserIDKey, userID)
+	ctx = context.WithValue(ctx, auth.TenantIDKey, tenantID)
+	return ctx
+}
 
 type mockRepo struct {
 	users map[string]user.UserRecord
@@ -67,7 +76,8 @@ func (m *mockRepo) List(ctx context.Context, tenantID string, page, pageSize int
 
 func TestCreateUser(t *testing.T) {
 	h := user.NewHandler(newMockRepo())
-	resp, err := h.CreateUser(context.Background(), &userpb.CreateUserRequest{
+	ctx := newAuthCtx("tenant_admin", "admin-1", "t1")
+	resp, err := h.CreateUser(ctx, &userpb.CreateUserRequest{
 		Email: "new@example.com", FirstName: "Jane", LastName: "Doe", Role: "student", TenantId: "t1",
 	})
 	if err != nil {
@@ -80,7 +90,7 @@ func TestCreateUser(t *testing.T) {
 
 func TestCreateUser_EmptyEmail(t *testing.T) {
 	h := user.NewHandler(newMockRepo())
-	_, err := h.CreateUser(context.Background(), &userpb.CreateUserRequest{})
+	_, err := h.CreateUser(newAuthCtx("tenant_admin", "admin-1", "t1"), &userpb.CreateUserRequest{})
 	if err == nil {
 		t.Error("expected error for empty email")
 	}
@@ -89,7 +99,7 @@ func TestCreateUser_EmptyEmail(t *testing.T) {
 func TestGetUser(t *testing.T) {
 	repo := newMockRepo()
 	h := user.NewHandler(repo)
-	resp, _ := h.CreateUser(context.Background(), &userpb.CreateUserRequest{
+	resp, _ := h.CreateUser(newAuthCtx("tenant_admin", "admin-1", "t1"), &userpb.CreateUserRequest{
 		Email: "get@example.com", FirstName: "Get", LastName: "Test", TenantId: "t1",
 	})
 	got, err := h.GetUser(context.Background(), &userpb.GetUserRequest{UserId: resp.UserId})
@@ -112,10 +122,11 @@ func TestGetUser_NotFound(t *testing.T) {
 func TestDeleteUser(t *testing.T) {
 	repo := newMockRepo()
 	h := user.NewHandler(repo)
-	resp, _ := h.CreateUser(context.Background(), &userpb.CreateUserRequest{
+	ctx := newAuthCtx("tenant_admin", "admin-1", "t1")
+	resp, _ := h.CreateUser(ctx, &userpb.CreateUserRequest{
 		Email: "del@example.com", FirstName: "Del", LastName: "Test", TenantId: "t1",
 	})
-	delResp, err := h.DeleteUser(context.Background(), &userpb.DeleteUserRequest{UserId: resp.UserId})
+	delResp, err := h.DeleteUser(ctx, &userpb.DeleteUserRequest{UserId: resp.UserId})
 	if err != nil {
 		t.Fatalf("DeleteUser failed: %v", err)
 	}

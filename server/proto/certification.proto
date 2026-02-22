@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package certification.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/certification;certificationpb";
+
+service CertificationService {
+  rpc CreateTemplate (CreateTemplateRequest) returns (CertificateTemplate) {
+    option (google.api.http) = {
+      post: "/api/v1/certificates/templates"
+      body: "*"
+    };
+  }
+
+  rpc GetUserCertificates (GetUserCertificatesRequest) returns (GetUserCertificatesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/certificates"
+    };
+  }
+
+  rpc VerifyCertificate (VerifyCertificateRequest) returns (VerifyCertificateResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/certificates/{verification_code}/verify"
+    };
+  }
+}
+
+message CertificateTemplate {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string background_url = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message Certificate {
+  string id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string course_id = 4;
+  string verification_code = 5;
+  string pdf_url = 6;
+  google.protobuf.Timestamp issued_at = 7;
+}
+
+message CreateTemplateRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string background_url = 3;
+}
+
+message GetUserCertificatesRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+}
+
+message GetUserCertificatesResponse {
+  repeated Certificate certificates = 1;
+}
+
+message VerifyCertificateRequest {
+  string verification_code = 1;
+}
+
+message VerifyCertificateResponse {
+  bool is_valid = 1;
+  Certificate certificate = 2;
+  string student_name = 3;
+  string course_name = 4;
+}
