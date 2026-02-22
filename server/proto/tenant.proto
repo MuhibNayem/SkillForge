@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package learnhub.tenant.v1;
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/tenantpb";
+
+service TenantService {
+  rpc CreateTenant(CreateTenantRequest) returns (TenantResponse);
+  rpc GetTenant(GetTenantRequest) returns (TenantResponse);
+  rpc UpdateTenantSettings(UpdateTenantSettingsRequest) returns (TenantResponse);
+}
+
+message CreateTenantRequest {
+  string name = 1;
+  string domain = 2;
+  string admin_email = 3;
+}
+
+message GetTenantRequest {
+  string tenant_id = 1;
+}
+
+message UpdateTenantSettingsRequest {
+  string tenant_id = 1;
+  string theme = 2;
+  string logo_url = 3;
+  map<string, string> feature_flags = 4;
+}
+
+message TenantResponse {
+  string tenant_id = 1;
+  string name = 2;
+  string domain = 3;
+  string status = 4;
+  string theme = 5;
+  string logo_url = 6;
+  int64 created_at = 7;
+}

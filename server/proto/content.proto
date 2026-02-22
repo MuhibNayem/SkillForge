@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package learnhub.content.v1;
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/contentpb";
+
+service ContentService {
+  rpc UploadContent(UploadContentRequest) returns (ContentResponse);
+  rpc GetContent(GetContentRequest) returns (ContentResponse);
+  rpc DeleteContent(DeleteContentRequest) returns (DeleteContentResponse);
+  rpc ListContent(ListContentRequest) returns (ListContentResponse);
+}
+
+message UploadContentRequest {
+  string filename = 1;
+  string content_type = 2;
+  int64 size_bytes = 3;
+  string tenant_id = 4;
+  string course_id = 5;
+  string uploaded_by = 6;
+}
+
+message GetContentRequest {
+  string content_id = 1;
+}
+
+message DeleteContentRequest {
+  string content_id = 1;
+}
+
+message DeleteContentResponse {
+  bool success = 1;
+}
+
+message ListContentRequest {
+  string tenant_id = 1;
+  string course_id = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListContentResponse {
+  repeated ContentResponse items = 1;
+  int32 total = 2;
+}
+
+message ContentResponse {
+  string content_id = 1;
+  string filename = 2;
+  string content_type = 3;
+  int64 size_bytes = 4;
+  string download_url = 5;
+  string tenant_id = 6;
+  string course_id = 7;
+  string uploaded_by = 8;
+  string status = 9;
+  int64 created_at = 10;
+}

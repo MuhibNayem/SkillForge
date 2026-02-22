@@ -1,0 +1,11 @@
+go 1.25.3
+
+use (
+	./shared
+	./services/auth
+	./services/user
+	./services/tenant
+	./services/course
+	./services/content
+	./services/enrollment
+)

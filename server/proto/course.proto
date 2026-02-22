@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package learnhub.course.v1;
+
+option go_package = "github.com/amnayem/skillforge/shared/pb/coursepb";
+
+service CourseService {
+  rpc CreateCourse(CreateCourseRequest) returns (CourseResponse);
+  rpc GetCourse(GetCourseRequest) returns (CourseResponse);
+  rpc UpdateCourse(UpdateCourseRequest) returns (CourseResponse);
+  rpc DeleteCourse(DeleteCourseRequest) returns (DeleteCourseResponse);
+  rpc ListCourses(ListCoursesRequest) returns (ListCoursesResponse);
+  rpc PublishCourse(PublishCourseRequest) returns (CourseResponse);
+  rpc AddModule(AddModuleRequest) returns (ModuleResponse);
+  rpc AddLesson(AddLessonRequest) returns (LessonResponse);
+}
+
+message CreateCourseRequest {
+  string title = 1;
+  string description = 2;
+  string category = 3;
+  string difficulty = 4;
+  string instructor_id = 5;
+  string tenant_id = 6;
+}
+
+message GetCourseRequest {
+  string course_id = 1;
+}
+
+message UpdateCourseRequest {
+  string course_id = 1;
+  string title = 2;
+  string description = 3;
+  string category = 4;
+  string difficulty = 5;
+  string thumbnail_url = 6;
+}
+
+message DeleteCourseRequest {
+  string course_id = 1;
+}
+
+message DeleteCourseResponse {
+  bool success = 1;
+}
+
+message PublishCourseRequest {
+  string course_id = 1;
+}
+
+message ListCoursesRequest {
+  string tenant_id = 1;
+  string category = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListCoursesResponse {
+  repeated CourseResponse courses = 1;
+  int32 total = 2;
+}
+
+message AddModuleRequest {
+  string course_id = 1;
+  string title = 2;
+  int32 order = 3;
+}
+
+message AddLessonRequest {
+  string course_id = 1;
+  string module_id = 2;
+  string title = 3;
+  string type = 4;
+  string content_id = 5;
+  int32 order = 6;
+}
+
+message CourseResponse {
+  string course_id = 1;
+  string title = 2;
+  string description = 3;
+  string category = 4;
+  string difficulty = 5;
+  string status = 6;
+  string instructor_id = 7;
+  string tenant_id = 8;
+  string thumbnail_url = 9;
+  repeated ModuleResponse modules = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+}
+
+message ModuleResponse {
+  string module_id = 1;
+  string title = 2;
+  int32 order = 3;
+  repeated LessonResponse lessons = 4;
+}
+
+message LessonResponse {
+  string lesson_id = 1;
+  string title = 2;
+  string type = 3;
+  string content_id = 4;
+  int32 order = 5;
+}

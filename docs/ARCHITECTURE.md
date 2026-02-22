@@ -131,7 +131,7 @@ C4Context
     Person_Ext(executive, "Executive", "Views analytics and reports")
     
     System_Boundary(lms, "LearnHub LMS Platform") {
-        System(web_app, "Web Application", "React SPA for browser access")
+        System(web_app, "Web Application", "Svelte 5 SPA for browser access")
         System(mobile_app, "Mobile Apps", "iOS/Android native apps")
         System(api_gateway, "API Gateway", "Entry point for all API requests")
         System(services, "Microservices", "Domain-specific services")
@@ -170,7 +170,7 @@ C4Context
 ```mermaid
 flowchart TB
     subgraph "Client Layer"
-        web[Web Application<br/>React + TypeScript]
+        web[Web Application<br/>Svelte 5 + TypeScript]
         ios[iOS App<br/>Swift]
         android[Android App<br/>Kotlin]
         api_clients[API Clients<br/>Partner Integrations]
@@ -209,7 +209,7 @@ flowchart TB
         postgres[(PostgreSQL<br/>Primary DB)]
         mongo[(MongoDB<br/>Content/Logs)]
         redis[(Redis<br/>Cache/Session)]
-        s3[(S3<br/>Media Storage)]
+        s3[(MinIO<br/>Media Storage)]
         elastic[(Elasticsearch<br/>Search/Analytics)]
     end
     
@@ -247,7 +247,7 @@ flowchart TB
     user_svc --> postgres
     course_svc --> postgres
     content_svc --> mongo
-    content_svc --> s3
+    content_svc --> minio
     assessment_svc --> postgres
     enroll_svc --> postgres
     analytics_svc --> elastic
@@ -314,7 +314,7 @@ flowchart TB
     end
     
     subgraph "AWS Services"
-        s3[S3<br/>Media Storage]
+        s3[MinIO<br/>Media Storage]
         cloudfront[CloudFront CDN]
         sqs[SQS<br/>Message Queue]
         sns[SNS<br/>Notifications]
@@ -332,14 +332,14 @@ flowchart TB
     rds_primary --> rds_standby
     rds_primary --> rds_eu
     
-    api_pod1 --> s3
+    api_pod1 --> minio
     api_pod1 --> sqs
     api_pod1 --> redis_master
     
     worker_pod1 --> sqs
-    worker_pod1 --> s3
+    worker_pod1 --> minio
     
-    s3 --> cloudfront
+    minio --> cloudfront
 ```
 
 ### 4.2 Data Flow Architecture
@@ -398,20 +398,20 @@ flowchart LR
         
         subgraph "Tenant A"
             schema_a[Schema: tenant_a]
-            bucket_a[S3: tenant-a/]
+            bucket_a[MinIO: tenant-a/]
             config_a[Config]
         end
         
         subgraph "Tenant B"
             schema_b[Schema: tenant_b]
-            bucket_b[S3: tenant-b/]
+            bucket_b[MinIO: tenant-b/]
             config_b[Config]
         end
         
         subgraph "Tenant C (Enterprise)"
             dedicated_db[(Dedicated DB)]
             dedicated_cache[(Dedicated Cache)]
-            bucket_c[S3: tenant-c/]
+            bucket_c[MinIO: tenant-c/]
         end
     end
     
@@ -443,27 +443,28 @@ flowchart LR
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| **Primary Language** | Go (Golang) | Performance, concurrency, simplicity |
+| **Primary Language** | Go 1.22+ | Performance, concurrency, simplicity, excellent gRPC support |
 | **Secondary Language** | Python | AI/ML services, data processing |
 | **API Framework** | Gin (Go), FastAPI (Python) | Performance, OpenAPI support |
-| **gRPC** | gRPC-Go | Internal service communication |
+| **gRPC** | gRPC-Go + Protobuf v3 | Internal service-to-service communication, type-safe contracts |
 | **Database (Primary)** | PostgreSQL 15 | ACID compliance, JSONB, extensions |
 | **Database (NoSQL)** | MongoDB 7 | Flexible schemas, content storage |
 | **Cache** | Redis 7 | Sessions, caching, pub/sub |
 | **Search** | Elasticsearch 8 | Full-text search, analytics |
 | **Message Queue** | Apache Kafka | Event streaming, durability |
-| **Object Storage** | AWS S3 | Media storage, durability |
+| **Object Storage** | MinIO | Media storage, durability |
 
 ### 5.3 Frontend Technologies
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| **Web Framework** | React 18 | Ecosystem, performance, hiring |
+| **Web Framework** | Svelte 5 | Compile-time optimization, minimal runtime, signals-based reactivity |
 | **Language** | TypeScript 5 | Type safety, developer experience |
-| **State Management** | Zustand | Simplicity, performance |
-| **UI Components** | Custom + Radix UI | Accessibility, customization |
-| **Styling** | Tailwind CSS | Developer experience, performance |
-| **Build Tool** | Vite | Fast builds, HMR |
+| **State Management** | Svelte 5 Runes | Built-in fine-grained reactivity (`$state`, `$derived`, `$effect`) |
+| **UI Components** | shadcn-svelte | Accessible, customizable, copy-paste components |
+| **Icons** | Lucide Svelte | Consistent, lightweight, tree-shakeable icons |
+| **Styling** | Tailwind CSS | Developer experience, performance, utility-first |
+| **Build Tool** | Vite | Fast builds, HMR, Svelte-first support |
 | **Testing** | Vitest, Playwright | Fast unit tests, E2E testing |
 | **Mobile** | React Native | Code sharing, native performance |
 
@@ -476,11 +477,126 @@ flowchart LR
 | **Infrastructure as Code** | Terraform | Multi-cloud, state management |
 | **CI/CD** | GitHub Actions | Integration, ease of use |
 | **Service Mesh** | Istio | Traffic management, observability |
-| **API Gateway** | Kong | Performance, plugins |
+| **API Gateway** | Kong | Performance, plugins, gRPC support |
 | **Secrets Management** | AWS Secrets Manager + Vault | Security, rotation |
 | **Configuration** | AWS AppConfig | Feature flags, dynamic config |
 
-### 5.5 Observability Stack
+### 5.5 API Gateway Configuration (Kong)
+
+**Architecture Overview:**
+
+Kong Gateway serves as the single entry point for all client requests, handling REST/JSON to gRPC translation for backend services.
+
+```mermaid
+flowchart LR
+    subgraph "Clients"
+        web[Svelte 5 Web App]
+        mobile[Mobile Apps]
+        partners[Partner APIs]
+    end
+
+    subgraph "Kong Gateway"
+        ingress[Ingress Controller]
+        plugins[Plugin Chain]
+        grpc_proxy[gRPC Proxy]
+    end
+
+    subgraph "Backend Services"
+        user_svc[User Service<br/>gRPC]
+        course_svc[Course Service<br/>gRPC]
+        auth_svc[Auth Service<br/>gRPC]
+    end
+
+    web -->|HTTPS/JSON| ingress
+    mobile -->|HTTPS/JSON| ingress
+    partners -->|HTTPS/JSON| ingress
+
+    ingress --> plugins
+    plugins --> grpc_proxy
+    grpc_proxy -->|gRPC| user_svc
+    grpc_proxy -->|gRPC| course_svc
+    grpc_proxy -->|gRPC| auth_svc
+```
+
+**Kong Plugins Configuration:**
+
+| Plugin | Purpose | Configuration |
+|--------|---------|---------------|
+| **grpc-gateway** | REST → gRPC translation | Route-specific mapping |
+| **rate-limiting** | API rate limiting | Per-consumer, sliding window |
+| **jwt** | JWT authentication | Token validation, claims extraction |
+| **cors** | Cross-origin requests | Configured origins, methods |
+| **request-transformer** | Header/body transformation | Add tenant context |
+| **response-transformer** | Response standardization | Unified error format |
+| **prometheus** | Metrics export | `/metrics` endpoint |
+| **zipkin** | Distributed tracing | Trace propagation |
+
+**gRPC Route Mapping Example:**
+
+```yaml
+routes:
+  - name: user-service-grpc
+    protocols:
+      - grpc
+      - grpcs
+    service: user-service
+    paths:
+      - /api/v1/users
+    strip_path: true
+    preserve_host: true
+
+services:
+  - name: user-service
+    protocol: grpc
+    host: user-service.default.svc.cluster.local
+    port: 9090
+    grpc_service_name: learnhub.user.v1.UserService
+```
+
+**REST to gRPC Translation:**
+
+| REST Endpoint | gRPC Method | HTTP Verb → gRPC |
+|---------------|-------------|------------------|
+| `GET /api/v1/users/{id}` | `GetUser(GetUserRequest)` | GET → Unary |
+| `POST /api/v1/users` | `CreateUser(CreateUserRequest)` | POST → Unary |
+| `PUT /api/v1/users/{id}` | `UpdateUser(UpdateUserRequest)` | PUT → Unary |
+| `DELETE /api/v1/users/{id}` | `DeleteUser(DeleteUserRequest)` | DELETE → Unary |
+| `GET /api/v1/users` | `ListUsers(ListUsersRequest)` | GET → Unary (paginated) |
+
+**Kong Deployment:**
+
+```yaml
+# kong-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-gateway
+  namespace: gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    spec:
+      containers:
+        - name: kong
+          image: kong:3.5
+          env:
+            - name: KONG_DATABASE
+              value: "postgres"
+            - name: KONG_PG_HOST
+              value: kong-postgres
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+          ports:
+            - containerPort: 8000
+            - containerPort: 8443
+```
+
+### 5.6 Observability Stack
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
@@ -491,7 +607,7 @@ flowchart LR
 | **Dashboards** | Grafana | Unified observability UI |
 | **Error Tracking** | Sentry | Application error monitoring |
 
-### 5.6 AI/ML Stack
+### 5.7 AI/ML Stack
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
@@ -500,6 +616,68 @@ flowchart LR
 | **Vector Database** | Pinecone | Embedding storage, similarity search |
 | **LLM Integration** | Anthropic Claude API | AI features |
 | **ML Pipelines** | Kubeflow | ML workflow orchestration |
+
+### 5.8 Repository Structure
+
+**Monorepo Layout:**
+
+```
+skillforge/
+├── client/                 # Svelte 5 Frontend Application
+│   ├── src/
+│   │   ├── lib/           # Reusable components & utilities
+│   │   │   ├── components/
+│   │   │   │   ├── ui/    # shadcn-svelte components
+│   │   │   │   └── ...    # Feature components
+│   │   │   ├── stores/    # Svelte 5 rune-based state
+│   │   │   └── utils/     # Helper functions
+│   │   ├── routes/        # File-based routing
+│   │   ├── app.html       # HTML template
+│   │   └── hooks.server.ts # Server hooks
+│   ├── static/            # Static assets
+│   ├── tests/             # Vitest unit tests
+│   ├── playwright/        # E2E tests
+│   ├── tailwind.config.js
+│   ├── svelte.config.js
+│   ├── vite.config.ts
+│   └── package.json
+│
+├── server/                # Go Backend Services
+│   ├── cmd/               # Application entry points
+│   │   ├── api/          # API gateway service
+│   │   └── services/     # Individual microservices
+│   ├── internal/          # Private application code
+│   │   ├── pkg/          # Internal packages
+│   │   ├── domain/       # Domain models
+│   │   └── infrastructure/ # External integrations
+│   ├── proto/            # Protocol Buffer definitions
+│   │   ├── user/
+│   │   ├── course/
+│   │   └── enrollment/
+│   ├── configs/          # Configuration files
+│   ├── scripts/          # Build & deployment scripts
+│   ├── go.mod
+│   └── go.sum
+│
+├── docs/                 # Documentation
+│   ├── ARCHITECTURE.md
+│   ├── API.md
+│   └── ...
+├── .github/             # GitHub Actions workflows
+├── docker-compose.yml   # Local development
+└── README.md
+```
+
+**Key Directories:**
+
+| Directory | Purpose | Technology |
+|-----------|---------|------------|
+| `/client` | Frontend web application | Svelte 5, TypeScript, Tailwind CSS |
+| `/client/src/lib/components/ui` | shadcn-svelte components | Accessible UI primitives |
+| `/client/src/lib/stores` | State management | Svelte 5 Runes (`$state`, `$derived`) |
+| `/server/cmd` | Go service binaries | Go 1.22+ |
+| `/server/proto` | gRPC service definitions | Protobuf v3 |
+| `/server/internal` | Private Go packages | Encapsulated business logic |
 
 ---
 
@@ -642,9 +820,9 @@ GET    /api/v1/courses/{id}/analytics
 | Attribute | Details |
 |-----------|---------|
 | **Responsibility** | Media storage, transcoding, SCORM/xAPI |
-| **Database** | MongoDB (metadata), S3 (files) |
+| **Database** | MongoDB (metadata), MinIO (files) |
 | **APIs** | REST, gRPC |
-| **Dependencies** | S3, Transcoding Service |
+| **Dependencies** | MinIO, Transcoding Service |
 | **Scale** | 10 pods + workers for transcoding |
 
 **Key Endpoints:**
@@ -761,15 +939,31 @@ POST   /api/v1/ai/at-risk/predict
 
 ### 6.3 Inter-Service Communication
 
+**Communication Patterns:**
+
+| Pattern | Technology | Use Case |
+|---------|------------|----------|
+| **Synchronous** | gRPC (HTTP/2 + Protobuf) | API Gateway → Services, Service → Service |
+| **Asynchronous** | Apache Kafka | Event-driven workflows, eventual consistency |
+| **External APIs** | REST/JSON (via Kong) | Client → API Gateway communication |
+
 ```mermaid
 flowchart LR
+    subgraph "Client Layer"
+        client[Svelte 5 Web App<br/>REST/JSON over HTTPS]
+    end
+
+    subgraph "API Gateway (Kong)"
+        kong[Kong Gateway<br/>gRPC Plugin]
+        transform[REST → gRPC Translation]
+    end
+
     subgraph "Synchronous (gRPC)"
-        gateway[API Gateway]
         user_svc[User Service]
         course_svc[Course Service]
         enroll_svc[Enrollment Service]
     end
-    
+
     subgraph "Asynchronous (Kafka)"
         kafka[Kafka Cluster]
         notification_svc[Notification Service]
@@ -777,20 +971,35 @@ flowchart LR
         search_svc[Search Service]
         audit_svc[Audit Service]
     end
-    
-    gateway -->|gRPC| user_svc
-    gateway -->|gRPC| course_svc
-    gateway -->|gRPC| enroll_svc
-    
+
+    client -->|REST/JSON| kong
+    kong -->|Transform| transform
+    transform -->|gRPC| user_svc
+    transform -->|gRPC| course_svc
+    transform -->|gRPC| enroll_svc
+
     user_svc -->|Publish| kafka
     course_svc -->|Publish| kafka
     enroll_svc -->|Publish| kafka
-    
+
     kafka -->|Consume| notification_svc
     kafka -->|Consume| analytics_svc
     kafka -->|Consume| search_svc
     kafka -->|Consume| audit_svc
 ```
+
+**gRPC Service Contracts:**
+- All service interfaces defined in `.proto` files
+- Protobuf v3 with well-known types
+- Services registered in central proto repository
+- Backward compatibility enforced via buf lint rules
+
+**gRPC Benefits:**
+- Strong typing via Protobuf schemas
+- Bidirectional streaming support
+- Lower latency vs REST (binary protocol)
+- Built-in deadline/timeout handling
+- Automatic code generation for Go clients/servers
 
 ### 6.4 Event Schema
 
@@ -869,7 +1078,7 @@ flowchart LR
 | **MongoDB** | Content metadata, logs, flexible schemas | Schema flexibility, document model |
 | **Redis** | Sessions, caching, rate limiting | In-memory speed, data structures |
 | **Elasticsearch** | Search, analytics, aggregations | Full-text search, real-time analytics |
-| **S3** | Media files, backups, archives | Durability, cost-effectiveness |
+| **MinIO** | Media files, backups, archives | Durability, cost-effectiveness |
 
 ### 7.2 Multi-Tenancy Strategy
 
@@ -1114,32 +1323,49 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph "External APIs"
-        rest[REST API<br/>Public/Partner]
-        graphql[GraphQL API<br/>Web/Mobile]
-        webhook[Webhooks<br/>Outbound Events]
+    subgraph "Client Layer"
+        web[Svelte 5 Web App<br/>REST/JSON]
+        mobile[Mobile Apps<br/>REST/JSON]
+        partners[Partner APIs<br/>REST/JSON]
     end
-    
+
+    subgraph "API Gateway (Kong)"
+        rest[REST API<br/>Public/Partner]
+        gateway_auth[Authentication]
+        gateway_rate[Rate Limiting]
+        grpc_translator[gRPC Translator]
+        logging[API Logging]
+    end
+
     subgraph "Internal APIs"
         grpc[gRPC<br/>Service-to-Service]
     end
-    
-    subgraph "API Gateway"
-        auth[Authentication]
-        rate[Rate Limiting]
-        transform[Request/Response Transform]
-        logging[API Logging]
+
+    subgraph "Backend Services"
+        user_svc[User Service]
+        course_svc[Course Service]
+        auth_svc[Auth Service]
     end
-    
-    rest --> auth
-    graphql --> auth
-    auth --> rate
-    rate --> transform
-    transform --> logging
+
+    web --> rest
+    mobile --> rest
+    partners --> rest
+
+    rest --> gateway_auth
+    gateway_auth --> gateway_rate
+    gateway_rate --> grpc_translator
+    grpc_translator --> logging
     logging --> grpc
-    
-    webhook -.->|Outbound| rest
+
+    grpc --> user_svc
+    grpc --> course_svc
+    grpc --> auth_svc
 ```
+
+**API Communication Flow:**
+1. **Client → Kong:** REST/JSON over HTTPS
+2. **Kong → Services:** gRPC over HTTP/2 (internal network)
+3. **Service → Service:** gRPC (direct or via service mesh)
 
 ### 8.2 REST API Design
 
@@ -1474,7 +1700,7 @@ allow {
 - PostgreSQL: AWS RDS encryption (AES-256)
 - MongoDB: WiredTiger encryption
 - Redis: Encrypted persistence
-- S3: SSE-S3 or SSE-KMS
+- MinIO: Server-Side Encryption
 - EBS: Encrypted volumes
 
 **Encryption in Transit:**
@@ -1673,7 +1899,7 @@ flowchart TB
             end
         end
         
-        s3[S3 Buckets]
+        s3[MinIO Buckets]
         sqs[SQS Queues]
         sns[SNS Topics]
         kms[KMS Keys]
@@ -1957,7 +2183,7 @@ flowchart TB
     subgraph "Automated Backups"
         rds_backup[RDS Automated<br/>Every 5 min]
         mongo_backup[MongoDB Snapshots<br/>Hourly]
-        s3_versioning[S3 Versioning<br/>Enabled]
+        minio_versioning[MinIO Versioning<br/>Enabled]
     end
     
     subgraph "Scheduled Backups"
@@ -1973,7 +2199,7 @@ flowchart TB
     
     rds_backup --> daily
     mongo_backup --> daily
-    s3_versioning --> daily
+    minio_versioning --> daily
     
     daily --> weekly
     weekly --> monthly
@@ -2033,7 +2259,7 @@ flowchart TB
 | **Compute** | EKS (EC2) | $5,000 | $25,000 | $150,000 |
 | **Database** | RDS PostgreSQL | $2,000 | $10,000 | $50,000 |
 | **Cache** | ElastiCache Redis | $500 | $2,500 | $15,000 |
-| **Storage** | S3 + EBS | $1,000 | $5,000 | $30,000 |
+| **Storage** | MinIO + EBS | $1,000 | $5,000 | $30,000 |
 | **CDN** | CloudFront | $500 | $3,000 | $20,000 |
 | **Networking** | NAT, ALB, Transfer | $1,000 | $5,000 | $25,000 |
 | **Monitoring** | Grafana Cloud | $200 | $500 | $2,000 |
@@ -2049,7 +2275,7 @@ flowchart TB
 | **Reserved Instances** | 30-40% | 1-3 year commitments |
 | **Spot Instances** | 60-70% | Stateless workloads |
 | **Auto-scaling** | 20-30% | Scale down during off-peak |
-| **S3 Lifecycle** | 40-60% | Move old data to Glacier |
+| **MinIO Lifecycle** | 40-60% | Move old data to Glacier |
 | **Right-sizing** | 10-20% | Regular instance optimization |
 | **Data Transfer** | 10-15% | VPC endpoints, CDN optimization |
 
