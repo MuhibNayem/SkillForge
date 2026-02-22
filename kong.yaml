@@ -202,6 +202,12 @@ services:
       - name: grpc-gateway
         config:
           proto: /opt/kong/proto/notification.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
 
   - name: analytics-service
     url: grpc://analytics-service:9090
@@ -216,6 +222,12 @@ services:
       - name: grpc-gateway
         config:
           proto: /opt/kong/proto/analytics.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
 
   - name: search-service
     url: grpc://search-service:9090
@@ -230,9 +242,15 @@ services:
       - name: grpc-gateway
         config:
           proto: /opt/kong/proto/search.proto
+      - name: jwt
+        config:
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
 
   - name: ai-service
-    url: grpc://ai-service:9090
+    url: http://ai-service:8080
     routes:
       - name: ai-rest-proxy
         paths:
@@ -241,9 +259,12 @@ services:
           - http
           - https
     plugins:
-      - name: grpc-gateway
+      - name: jwt
         config:
-          proto: /opt/kong/proto/ai.proto
+          cookie_names:
+            - access_token
+          claims_to_verify:
+            - exp
 
 plugins:
   - name: rate-limiting

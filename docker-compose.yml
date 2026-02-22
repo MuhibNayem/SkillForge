@@ -271,6 +271,74 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  notification-service:
+    build:
+      context: ./server
+      dockerfile: services/notification/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      DB_URL: postgres://learnhub:password@postgres:5432/learnhub?sslmode=disable
+      REDIS_ADDR: redis:6379
+      KAFKA_BROKERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@skillforge.io}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  analytics-service:
+    build:
+      context: ./server
+      dockerfile: services/analytics/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      KAFKA_BROKERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  search-service:
+    build:
+      context: ./server
+      dockerfile: services/search/Dockerfile
+    environment:
+      APP_ENV: production
+      PORT: "9090"
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      KAFKA_BROKERS: kafka:29092
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ./server/services/ai
+      dockerfile: Dockerfile
+    environment:
+      ZAI_API_KEY: ${ZAI_API_KEY:-}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

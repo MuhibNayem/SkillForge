@@ -15,7 +15,7 @@ jobs:
         working-directory: ./server
     strategy:
       matrix:
-        service: [auth, user, course, content, enrollment, assessment, tenant, certification]
+        service: [auth, user, course, content, enrollment, assessment, tenant, certification, notification, analytics, search]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -47,6 +47,25 @@ jobs:
         run: go build -v ./...
       - name: Test
         run: go test -v ./...
+
+  test-ai:
+    name: AI Service Tests (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server/services/ai
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        env:
+          ZAI_API_KEY: dummy-key-for-tests
+        run: pytest -v
 
   test-frontend:
     name: Frontend Tests

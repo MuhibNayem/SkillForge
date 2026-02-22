@@ -1,6 +1,6 @@
 .PHONY: proto-gen proto-install build test migrate-create migrate-up migrate-down frontend-install frontend-build frontend-dev
 
-SERVICES := auth user tenant course content enrollment assessment certification
+SERVICES := auth user tenant course content enrollment assessment certification notification analytics search
 DB_URL ?= "postgres://learnhub:password@localhost:5432/learnhub?sslmode=disable"
 
 # ============================================================
