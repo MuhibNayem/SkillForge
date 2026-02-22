@@ -263,7 +263,63 @@
 - **Admin Dashboard:** Tenant management (create/suspend/configure), user management, billing overview, system health
 - **Webhook System:** Configurable webhooks for key events (`course.completed`, `enrollment.created`); admin UI for webhook CRUD with secret signing and retry logic
 
-### 2.5 Testing Strategy (Phase 2) ⬜
+### 2.5 AI-Enhanced Learning (AI Service V1.5) ⬜
+
+> **Goal:** Elevate the AI service from content-utility endpoints to interactive, student-facing learning features. Uses existing infrastructure (Redis for session memory, Elasticsearch for vector search).
+
+#### AI Tutor Chatbot ⬜
+- **Responsibility:** Per-course conversational tutor that answers student questions in context
+- **Architecture:** Stateful chat with session-based memory stored in Redis
+- **Key APIs:**
+  - `POST /ai/tutor/chat` — Send message, receive AI response (supports streaming via SSE)
+  - `DELETE /ai/tutor/chat/{session_id}` — Clear session history
+- **Implementation:**
+  - Modern LCEL with `RunnableWithMessageHistory` (replaces deprecated `ConversationBufferMemory`)
+  - System prompt dynamically injected with course name, lesson context, and instructor guidelines
+  - Conversation window limited to last 20 messages to control token usage
+  - Socratic questioning mode: AI guides students toward answers rather than giving them directly
+- **Integration:** Embedded in the Svelte course player as a slide-out chat panel
+
+#### Q&A over Course Materials (RAG) ⬜
+- **Responsibility:** Answer student questions using actual course content (videos transcripts, PDFs, lesson text)
+- **Architecture:** RAG (Retrieval-Augmented Generation) pipeline
+- **Key APIs:**
+  - `POST /ai/search/semantic` — Semantic search over course content with cited sources
+- **Implementation:**
+  - **Embeddings:** Generate vector embeddings of course content chunks using Z.AI embedding API
+  - **Vector Store:** Elasticsearch with dense vector fields (leverages existing ES instance — no new infra)
+  - **RAG Pipeline:** Student query → embed → ES similarity search (top-5 chunks) → inject into GLM prompt → generate contextual answer with source citations
+  - **Indexing:** Triggered by `content.uploaded` Kafka event — content is chunked, embedded, and indexed automatically
+- **Chunking Strategy:** 512-token chunks with 50-token overlap; metadata preserved (course_id, lesson_id, content_type)
+
+#### Auto Quiz Generation ⬜
+- **Responsibility:** Generate quiz questions from lesson content for instructors to review and publish
+- **Key APIs:**
+  - `POST /ai/quiz/generate` — Generate quiz from lesson content
+- **Implementation:**
+  - One-shot LCEL chain (same pattern as existing endpoints — no memory needed)
+  - Input: lesson text/transcript + desired question count + question types (MCQ, true/false, short answer)
+  - Output: Structured JSON matching Assessment Service payload format (ready to import)
+  - Instructor reviews and edits generated questions before publishing
+- **Integration:** "Generate Quiz with AI" button in the instructor course builder UI
+
+#### AI-Assisted Grading Hints ⬜
+- **Responsibility:** Provide grading suggestions for essay/file-upload assignments to reduce instructor workload
+- **Key APIs:**
+  - `POST /ai/grading/suggest` — Analyze student submission against rubric, return suggested score + feedback
+- **Implementation:**
+  - Input: student submission text + rubric criteria + max points per criterion
+  - Output: Per-criterion score suggestion + written feedback + overall confidence score
+  - **Final grade is always set by the instructor** — AI provides hints only, never auto-grades essays
+  - Flagged submissions (low confidence or plagiarism indicators) highlighted for closer review
+- **Integration:** Grading panel in Assessment Service UI shows AI suggestions alongside the submission
+
+#### Infrastructure Requirements
+- **Redis:** Already available — used for chat session memory (key: `tutor:{session_id}`, TTL: 24h)
+- **Elasticsearch:** Already available — add dense vector field to existing content index for semantic search
+- **No new infrastructure** required for this phase
+
+### 2.6 Testing Strategy (Phase 2) ⬜
 - **Performance Testing:** K6 load tests targeting <200ms P95 API latency under 1,000 concurrent users
 - **Contract Testing:** Protobuf compatibility checks in CI (buf breaking)
 - **E2E Expansion:** Playwright flows for assessment submission, certificate download, notification delivery
