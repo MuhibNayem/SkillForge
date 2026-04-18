@@ -1,6 +1,6 @@
 module github.com/amnayem/skillforge/services/assessment
 
-go 1.25.3
+go 1.19
 
 replace github.com/amnayem/skillforge/shared => ../../shared
 

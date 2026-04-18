@@ -1,6 +1,6 @@
 module github.com/amnayem/skillforge/services/auth
 
-go 1.25.3
+go 1.19
 
 require (
 	github.com/amnayem/skillforge/shared v0.0.0

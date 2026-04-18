@@ -1,0 +1,330 @@
+syntax = "proto3";
+
+package discussion;
+
+option go_package = "github.com/learnhub/lms/server/shared/pb/discussion";
+
+import "google/api/annotations.proto";
+
+// Discussion Service - Enterprise forum and Q&A system
+service DiscussionService {
+  // Create a new discussion thread
+  rpc CreateThread(CreateThreadRequest) returns (ThreadResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/discussion/threads"
+      body: "*"
+    };
+  }
+
+  // Get a specific thread with replies
+  rpc GetThread(GetThreadRequest) returns (ThreadResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/discussion/threads/{thread_id}"
+    };
+  }
+
+  // List threads with filtering and pagination
+  rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/discussion/threads"
+    };
+  }
+
+  // Update a thread
+  rpc UpdateThread(UpdateThreadRequest) returns (ThreadResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/discussion/threads/{thread_id}"
+      body: "*"
+    };
+  }
+
+  // Delete a thread (soft delete)
+  rpc DeleteThread(DeleteThreadRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/discussion/threads/{thread_id}"
+    };
+  }
+
+  // Create a reply to a thread
+  rpc CreateReply(CreateReplyRequest) returns (ReplyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/discussion/threads/{thread_id}/replies"
+      body: "*"
+    };
+  }
+
+  // Get replies for a thread
+  rpc ListReplies(ListRepliesRequest) returns (ListRepliesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/discussion/threads/{thread_id}/replies"
+    };
+  }
+
+  // Update a reply
+  rpc UpdateReply(UpdateReplyRequest) returns (ReplyResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/discussion/replies/{reply_id}"
+      body: "*"
+    };
+  }
+
+  // Delete a reply (soft delete)
+  rpc DeleteReply(DeleteReplyRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/discussion/replies/{reply_id}"
+    };
+  }
+
+  // Vote on thread or reply (upvote/downvote)
+  rpc Vote(VoteRequest) returns (VoteResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/discussion/{type}/{id}/vote"
+      body: "*"
+    };
+  }
+
+  // Pin a thread (instructor/admin only)
+  rpc PinThread(PinThreadRequest) returns (ThreadResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/discussion/threads/{thread_id}/pin"
+    };
+  }
+
+  // Mark thread as resolved (instructor only)
+  rpc ResolveThread(ResolveThreadRequest) returns (ThreadResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/discussion/threads/{thread_id}/resolve"
+    };
+  }
+
+  // Subscribe to a thread for notifications
+  rpc Subscribe(SubscribeRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/discussion/threads/{thread_id}/subscribe"
+    };
+  }
+
+  // Unsubscribe from a thread
+  rpc Unsubscribe(UnsubscribeRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/discussion/threads/{thread_id}/subscribe"
+    };
+  }
+
+  // Search discussions
+  rpc SearchDiscussions(SearchDiscussionsRequest) returns (SearchDiscussionsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/discussion/search"
+    };
+  }
+
+  // Get user's discussion stats
+  rpc GetUserStats(GetUserStatsRequest) returns (UserStatsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/discussion/users/{user_id}/stats"
+    };
+  }
+}
+
+// Messages
+
+message Thread {
+  string id = 1;
+  string tenant_id = 2;
+  string course_id = 3;
+  string module_id = 4;
+  string lesson_id = 5;
+  string author_id = 6;
+  string author_name = 7;
+  string author_avatar = 8;
+  string title = 9;
+  string content = 10;
+  repeated string tags = 11;
+  int32 upvotes = 12;
+  int32 downvotes = 13;
+  int32 reply_count = 14;
+  bool is_pinned = 15;
+  bool is_resolved = 16;
+  string resolved_reply_id = 17;
+  bool is_subscribed = 18;
+  bool has_voted = 19;
+  int32 user_vote_type = 20; // 0: none, 1: up, -1: down
+  int64 created_at = 21;
+  int64 updated_at = 22;
+  int64 deleted_at = 23;
+  string last_activity_at = 24;
+  string category = 25; // general, question, feedback, announcement
+}
+
+message Reply {
+  string id = 1;
+  string thread_id = 2;
+  string tenant_id = 3;
+  string author_id = 4;
+  string author_name = 5;
+  string author_avatar = 6;
+  string content = 7;
+  int32 upvotes = 8;
+  int32 downvotes = 9;
+  bool is_accepted = 10;
+  bool has_voted = 11;
+  int32 user_vote_type = 12;
+  int64 created_at = 13;
+  int64 updated_at = 14;
+  int64 deleted_at = 15;
+  repeated Reply replies = 16; // Nested replies
+}
+
+message CreateThreadRequest {
+  string tenant_id = 1;
+  string course_id = 2;
+  string module_id = 3;
+  string lesson_id = 4;
+  string title = 5;
+  string content = 6;
+  repeated string tags = 7;
+  string category = 8;
+}
+
+message GetThreadRequest {
+  string thread_id = 1;
+}
+
+message ListThreadsRequest {
+  string tenant_id = 1;
+  string course_id = 2;
+  string module_id = 3;
+  string lesson_id = 4;
+  string category = 5;
+  string search = 6;
+  repeated string tags = 7;
+  bool include_pinned_first = 8;
+  bool show_resolved = 9;
+  string sort_by = 10; // created_at, updated_at, upvotes, reply_count
+  string sort_order = 11; // asc, desc
+  int32 page = 12;
+  int32 page_size = 13;
+}
+
+message UpdateThreadRequest {
+  string thread_id = 1;
+  string title = 2;
+  string content = 3;
+  repeated string tags = 4;
+  string category = 5;
+}
+
+message DeleteThreadRequest {
+  string thread_id = 1;
+}
+
+message CreateReplyRequest {
+  string thread_id = 1;
+  string parent_reply_id = 2; // For nested replies
+  string content = 3;
+}
+
+message ListRepliesRequest {
+  string thread_id = 1;
+  string sort_by = 2; // created_at, upvotes
+  string sort_order = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message UpdateReplyRequest {
+  string reply_id = 1;
+  string content = 2;
+}
+
+message DeleteReplyRequest {
+  string reply_id = 1;
+}
+
+message VoteRequest {
+  string type = 1; // thread, reply
+  string id = 2;
+  int32 vote_type = 3; // 1: up, -1: down, 0: remove
+}
+
+message PinThreadRequest {
+  string thread_id = 1;
+  bool pinned = 2;
+}
+
+message ResolveThreadRequest {
+  string thread_id = 1;
+  string reply_id = 2; // Optional: mark specific reply as solution
+}
+
+message SubscribeRequest {
+  string thread_id = 1;
+}
+
+message UnsubscribeRequest {
+  string thread_id = 1;
+}
+
+message SearchDiscussionsRequest {
+  string tenant_id = 1;
+  string query = 2;
+  string course_id = 3;
+  repeated string categories = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+
+message GetUserStatsRequest {
+  string user_id = 1;
+}
+
+message ThreadResponse {
+  Thread thread = 1;
+}
+
+message ListThreadsResponse {
+  repeated Thread threads = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message ReplyResponse {
+  Reply reply = 1;
+}
+
+message ListRepliesResponse {
+  repeated Reply replies = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message VoteResponse {
+  int32 upvotes = 1;
+  int32 downvotes = 2;
+  int32 user_vote_type = 3;
+}
+
+message EmptyResponse {}
+
+message SearchDiscussionsResponse {
+  repeated Thread threads = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message UserStatsResponse {
+  string user_id = 1;
+  int32 threads_created = 2;
+  int32 replies_created = 3;
+  int32 total_upvotes = 4;
+  int32 total_downvotes = 5;
+  int32 solutions_provided = 6;
+  int32 best_answer_count = 7;
+  double reputation_score = 8;
+}
