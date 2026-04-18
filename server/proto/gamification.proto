@@ -1,0 +1,463 @@
+syntax = "proto3";
+
+package gamification;
+
+option go_package = "github.com/learnhub/lms/server/shared/pb/gamification";
+
+import "google/api/annotations.proto";
+
+// Gamification Service - Badges, points, leaderboards, achievements
+service GamificationService {
+  // Award points to a user
+  rpc AwardPoints(AwardPointsRequest) returns (PointsResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/points/award"
+      body: "*"
+    };
+  }
+
+  // Deduct points from a user (penalty)
+  rpc DeductPoints(DeductPointsRequest) returns (PointsResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/points/deduct"
+      body: "*"
+    };
+  }
+
+  // Get user's points balance
+  rpc GetUserPoints(GetUserPointsRequest) returns (PointsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/users/{user_id}/points"
+    };
+  }
+
+  // Award a badge to a user
+  rpc AwardBadge(AwardBadgeRequest) returns (BadgeResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/badges/award"
+      body: "*"
+    };
+  }
+
+  // Revoke a badge from a user
+  rpc RevokeBadge(RevokeBadgeRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/gamification/users/{user_id}/badges/{badge_id}"
+    };
+  }
+
+  // Get user's badges
+  rpc GetUserBadges(GetUserBadgesRequest) returns (ListBadgesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/users/{user_id}/badges"
+    };
+  }
+
+  // Get all available badges
+  rpc ListBadges(ListBadgesRequest) returns (ListBadgesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/badges"
+    };
+  }
+
+  // Create a new badge (admin only)
+  rpc CreateBadge(CreateBadgeRequest) returns (BadgeResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/badges"
+      body: "*"
+    };
+  }
+
+  // Update a badge (admin only)
+  rpc UpdateBadge(UpdateBadgeRequest) returns (BadgeResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/gamification/badges/{badge_id}"
+      body: "*"
+    };
+  }
+
+  // Delete a badge (admin only)
+  rpc DeleteBadge(DeleteBadgeRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/gamification/badges/{badge_id}"
+    };
+  }
+
+  // Get leaderboard for a course or tenant
+  rpc GetLeaderboard(GetLeaderboardRequest) returns (LeaderboardResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/leaderboard"
+    };
+  }
+
+  // Get user's rank in leaderboard
+  rpc GetUserRank(GetUserRankRequest) returns (UserRankResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/users/{user_id}/rank"
+    };
+  }
+
+  // Track user activity for achievements
+  rpc TrackActivity(TrackActivityRequest) returns (ActivityResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/activity"
+      body: "*"
+    };
+  }
+
+  // Check and award achievements based on activity
+  rpc CheckAchievements(CheckAchievementsRequest) returns (CheckAchievementsResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/achievements/check"
+      body: "*"
+    };
+  }
+
+  // Get user's achievements
+  rpc GetUserAchievements(GetUserAchievementsRequest) returns (ListAchievementsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/users/{user_id}/achievements"
+    };
+  }
+
+  // Create achievement (admin only)
+  rpc CreateAchievement(CreateAchievementRequest) returns (AchievementResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/achievements"
+      body: "*"
+    };
+  }
+
+  // Get streak info for a user
+  rpc GetStreak(GetStreakRequest) returns (StreakResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/users/{user_id}/streak"
+    };
+  }
+
+  // Reset streak (admin only, for maintenance)
+  rpc ResetStreak(ResetStreakRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/gamification/users/{user_id}/streak/reset"
+    };
+  }
+
+  // Get gamification stats for dashboard
+  rpc GetStats(GetStatsRequest) returns (StatsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/gamification/stats"
+    };
+  }
+}
+
+// Messages
+
+enum ActivityType {
+  ACTIVITY_UNKNOWN = 0;
+  ACTIVITY_LOGIN = 1;
+  ACTIVITY_COURSE_COMPLETE = 2;
+  ACTIVITY_LESSON_COMPLETE = 3;
+  ACTIVITY_QUIZ_PASS = 4;
+  ACTIVITY_QUIZ_PERFECT = 5;
+  ACTIVITY_DISCUSSION_POST = 6;
+  ACTIVITY_DISCUSSION_REPLY = 7;
+  ACTIVITY_CONTENT_UPLOAD = 8;
+  ACTIVITY_CERTIFICATE_EARNED = 9;
+  ACTIVITY_STREAK_MAINTAINED = 10;
+  ACTIVITY_HELPFUL_ANSWER = 11;
+  ACTIVITY_FIRST_COURSE = 12;
+  ACTIVITY_INVITE_FRIEND = 13;
+}
+
+enum BadgeTier {
+  BADGE_TIER_BRONZE = 0;
+  BADGE_TIER_SILVER = 1;
+  BADGE_TIER_GOLD = 2;
+  BADGE_TIER_PLATINUM = 3;
+  BADGE_TIER_DIAMOND = 4;
+}
+
+message Badge {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string icon_url = 5;
+  BadgeTier tier = 6;
+  int32 points_required = 7;
+  string criteria_type = 8; // activity_count, course_complete, quiz_score, etc.
+  int32 criteria_value = 9;
+  bool is_active = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+}
+
+message UserBadge {
+  Badge badge = 1;
+  string user_id = 2;
+  int64 awarded_at = 3;
+  string awarded_by = 4;
+  string reason = 5;
+}
+
+message Achievement {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string icon_url = 5;
+  int32 points_reward = 6;
+  string trigger_type = 7; // activity, milestone, challenge
+  map<string, string> trigger_conditions = 8;
+  bool is_repeatable = 9;
+  int32 max_awards = 10;
+  bool is_active = 11;
+  int64 created_at = 12;
+  int64 updated_at = 13;
+}
+
+message UserAchievement {
+  Achievement achievement = 1;
+  string user_id = 2;
+  int64 unlocked_at = 3;
+  int32 times_earned = 4;
+  map<string, string> progress = 5;
+}
+
+message LeaderboardEntry {
+  int32 rank = 1;
+  string user_id = 2;
+  string user_name = 3;
+  string user_avatar = 4;
+  int64 total_points = 5;
+  int32 badges_count = 6;
+  int32 achievements_count = 7;
+  int32 current_streak = 8;
+  int64 last_activity = 9;
+}
+
+message Streak {
+  string user_id = 1;
+  int32 current_streak = 2;
+  int32 longest_streak = 3;
+  int64 last_activity_date = 4;
+  int64 streak_start_date = 5;
+  repeated int64 activity_dates = 6; // Last 30 days
+}
+
+message PointsHistory {
+  string id = 1;
+  string user_id = 2;
+  int64 points_change = 3;
+  int64 balance_after = 4;
+  string reason = 5;
+  ActivityType activity_type = 6;
+  string reference_id = 7; // course_id, quiz_id, etc.
+  int64 created_at = 8;
+}
+
+message AwardPointsRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  int64 points = 3;
+  string reason = 4;
+  ActivityType activity_type = 5;
+  string reference_id = 6;
+}
+
+message DeductPointsRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  int64 points = 3;
+  string reason = 4;
+  string reference_id = 5;
+}
+
+message GetUserPointsRequest {
+  string user_id = 1;
+}
+
+message PointsResponse {
+  string user_id = 1;
+  int64 total_points = 2;
+  int64 available_points = 3;
+  int64 spent_points = 4;
+  PointsHistory recent_history = 5;
+}
+
+message AwardBadgeRequest {
+  string user_id = 1;
+  string badge_id = 2;
+  string reason = 3;
+  string awarded_by = 4;
+}
+
+message RevokeBadgeRequest {
+  string user_id = 1;
+  string badge_id = 2;
+}
+
+message GetUserBadgesRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+}
+
+message ListBadgesRequest {
+  string tenant_id = 1;
+  BadgeTier tier = 2;
+  bool active_only = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message CreateBadgeRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string description = 3;
+  string icon_url = 4;
+  BadgeTier tier = 5;
+  int32 points_required = 6;
+  string criteria_type = 7;
+  int32 criteria_value = 8;
+}
+
+message UpdateBadgeRequest {
+  string badge_id = 1;
+  string name = 2;
+  string description = 3;
+  string icon_url = 4;
+  BadgeTier tier = 5;
+  int32 points_required = 6;
+  bool is_active = 7;
+}
+
+message DeleteBadgeRequest {
+  string badge_id = 1;
+}
+
+message GetLeaderboardRequest {
+  string tenant_id = 1;
+  string course_id = 2; // Optional: course-specific leaderboard
+  string time_period = 3; // daily, weekly, monthly, all_time
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message LeaderboardResponse {
+  repeated LeaderboardEntry entries = 1;
+  int32 total_count = 2;
+  string time_period = 3;
+  int64 last_updated = 4;
+}
+
+message GetUserRankRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  string course_id = 3;
+}
+
+message UserRankResponse {
+  int32 rank = 1;
+  int32 total_users = 2;
+  int64 points = 3;
+  int32 percentile = 4;
+  LeaderboardEntry user_entry = 5;
+}
+
+message TrackActivityRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  ActivityType activity_type = 3;
+  string reference_id = 4;
+  map<string, string> metadata = 5;
+  int64 timestamp = 6;
+}
+
+message ActivityResponse {
+  string user_id = 1;
+  ActivityType activity_type = 2;
+  int64 points_awarded = 3;
+  bool achievement_unlocked = 4;
+  repeated string unlocked_achievements = 5;
+  Streak streak_info = 6;
+}
+
+message CheckAchievementsRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  ActivityType activity_type = 3;
+  map<string, string> context = 4;
+}
+
+message CheckAchievementsResponse {
+  repeated Achievement unlocked = 1;
+  int64 total_points_awarded = 2;
+}
+
+message GetUserAchievementsRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  bool include_progress = 3;
+}
+
+message ListAchievementsResponse {
+  repeated UserAchievement achievements = 1;
+  int32 total_count = 2;
+  int32 unlocked_count = 3;
+  int32 locked_count = 4;
+}
+
+message CreateAchievementRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string description = 3;
+  string icon_url = 4;
+  int32 points_reward = 5;
+  string trigger_type = 6;
+  map<string, string> trigger_conditions = 7;
+  bool is_repeatable = 8;
+  int32 max_awards = 9;
+}
+
+message AchievementResponse {
+  Achievement achievement = 1;
+}
+
+message GetStreakRequest {
+  string user_id = 1;
+}
+
+message StreakResponse {
+  Streak streak = 1;
+  int64 points_from_streak = 2;
+  string next_milestone = 3;
+  int64 next_milestone_days = 4;
+}
+
+message ResetStreakRequest {
+  string user_id = 1;
+  string reason = 2;
+}
+
+message GetStatsRequest {
+  string tenant_id = 1;
+  string time_period = 2;
+}
+
+message StatsResponse {
+  int64 total_points_awarded = 1;
+  int64 total_badges_awarded = 2;
+  int64 total_achievements_unlocked = 3;
+  int32 active_users_with_streak = 4;
+  int32 average_streak_length = 5;
+  LeaderboardEntry top_user = 6;
+  repeated Badge most_common_badges = 7;
+  repeated Achievement most_common_achievements = 8;
+}
+
+message BadgeResponse {
+  Badge badge = 1;
+  UserBadge user_badge = 2; // Present if awarded to user
+}
+
+message EmptyResponse {}

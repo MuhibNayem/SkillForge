@@ -1,0 +1,539 @@
+syntax = "proto3";
+
+package audit;
+
+option go_package = "github.com/learnhub/lms/server/shared/pb/audit";
+
+import "google/api/annotations.proto";
+
+// Audit Service - Enterprise compliance logging and audit trails
+service AuditService {
+  // Log an audit event
+  rpc LogEvent(LogEventRequest) returns (EventResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/audit/events"
+      body: "*"
+    };
+  }
+
+  // Get audit events with filtering
+  rpc GetEvents(GetEventsRequest) returns (GetEventsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/events"
+    };
+  }
+
+  // Get a specific audit event
+  rpc GetEvent(GetEventRequest) returns (EventResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/events/{event_id}"
+    };
+  }
+
+  // Get audit trail for a specific resource
+  rpc GetResourceTrail(GetResourceTrailRequest) returns (GetEventsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/resources/{resource_type}/{resource_id}/trail"
+    };
+  }
+
+  // Get audit trail for a specific user
+  rpc GetUserTrail(GetUserTrailRequest) returns (GetEventsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/users/{user_id}/trail"
+    };
+  }
+
+  // Get audit trail for a tenant
+  rpc GetTenantTrail(GetTenantTrailRequest) returns (GetEventsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/tenants/{tenant_id}/trail"
+    };
+  }
+
+  // Export audit logs (for compliance)
+  rpc ExportLogs(ExportLogsRequest) returns (ExportResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/audit/export"
+      body: "*"
+    };
+  }
+
+  // Get audit statistics
+  rpc GetStats(GetStatsRequest) returns (StatsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/stats"
+    };
+  }
+
+  // Search audit logs
+  rpc SearchLogs(SearchLogsRequest) returns (GetEventsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/search"
+    };
+  }
+
+  // Retention policy management
+  rpc SetRetentionPolicy(SetRetentionPolicyRequest) returns (RetentionPolicyResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/audit/retention"
+      body: "*"
+    };
+  }
+
+  // Get retention policy
+  rpc GetRetentionPolicy(GetRetentionPolicyRequest) returns (RetentionPolicyResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/retention"
+    };
+  }
+
+  // Archive old audit logs
+  rpc ArchiveLogs(ArchiveLogsRequest) returns (ArchiveResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/audit/archive"
+      body: "*"
+    };
+  }
+
+  // Create alert rule for suspicious activity
+  rpc CreateAlertRule(CreateAlertRuleRequest) returns (AlertRuleResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/audit/alerts/rules"
+      body: "*"
+    };
+  }
+
+  // List alert rules
+  rpc ListAlertRules(ListAlertRulesRequest) returns (ListAlertRulesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/alerts/rules"
+    };
+  }
+
+  // Update alert rule
+  rpc UpdateAlertRule(UpdateAlertRuleRequest) returns (AlertRuleResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/audit/alerts/rules/{rule_id}"
+      body: "*"
+    };
+  }
+
+  // Delete alert rule
+  rpc DeleteAlertRule(DeleteAlertRuleRequest) returns (EmptyResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/audit/alerts/rules/{rule_id}"
+    };
+  }
+
+  // Get triggered alerts
+  rpc GetAlerts(GetAlertsRequest) returns (GetAlertsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/alerts"
+    };
+  }
+
+  // Acknowledge an alert
+  rpc AcknowledgeAlert(AcknowledgeAlertRequest) returns (AlertResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/audit/alerts/{alert_id}/acknowledge"
+    };
+  }
+
+  // Get compliance report
+  rpc GetComplianceReport(GetComplianceReportRequest) returns (ComplianceReportResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/audit/compliance/reports/{report_type}"
+    };
+  }
+}
+
+// Messages
+
+enum EventType {
+  EVENT_UNKNOWN = 0;
+  EVENT_AUTH_LOGIN = 1;
+  EVENT_AUTH_LOGOUT = 2;
+  EVENT_AUTH_FAILED = 3;
+  EVENT_AUTH_PASSWORD_CHANGE = 4;
+  EVENT_AUTH_MFA_ENABLE = 5;
+  EVENT_AUTH_MFA_DISABLE = 6;
+  EVENT_USER_CREATE = 7;
+  EVENT_USER_UPDATE = 8;
+  EVENT_USER_DELETE = 9;
+  EVENT_USER_ROLE_CHANGE = 10;
+  EVENT_COURSE_CREATE = 11;
+  EVENT_COURSE_UPDATE = 12;
+  EVENT_COURSE_DELETE = 13;
+  EVENT_COURSE_PUBLISH = 14;
+  EVENT_CONTENT_UPLOAD = 15;
+  EVENT_CONTENT_DOWNLOAD = 16;
+  EVENT_CONTENT_DELETE = 17;
+  EVENT_ENROLLMENT_CREATE = 18;
+  EVENT_ENROLLMENT_CANCEL = 19;
+  EVENT_ASSESSMENT_SUBMIT = 20;
+  EVENT_ASSESSMENT_GRADE = 21;
+  EVENT_CERTIFICATE_ISSUE = 22;
+  EVENT_DATA_EXPORT = 23;
+  EVENT_DATA_IMPORT = 24;
+  EVENT_ADMIN_ACTION = 25;
+  EVENT_SYSTEM_CONFIG_CHANGE = 26;
+  EVENT_API_ACCESS = 27;
+  EVENT_SECURITY_VIOLATION = 28;
+  EVENT_COMPLIANCE_CHECK = 29;
+}
+
+enum EventSeverity {
+  SEVERITY_UNKNOWN = 0;
+  SEVERITY_INFO = 1;
+  SEVERITY_WARNING = 2;
+  SEVERITY_ERROR = 3;
+  SEVERITY_CRITICAL = 4;
+}
+
+enum ComplianceStandard {
+  COMPLIANCE_NONE = 0;
+  COMPLIANCE_GDPR = 1;
+  COMPLIANCE_HIPAA = 2;
+  COMPLIANCE_SOC2 = 3;
+  COMPLIANCE_ISO27001 = 4;
+  COMPLIANCE_FERPA = 5;
+  COMPLIANCE_COPPA = 6;
+}
+
+message AuditEvent {
+  string id = 1;
+  string tenant_id = 2;
+  EventType event_type = 3;
+  EventSeverity severity = 4;
+  string actor_id = 5;
+  string actor_name = 6;
+  string actor_role = 7;
+  string actor_ip = 8;
+  string user_agent = 9;
+  string resource_type = 10;
+  string resource_id = 11;
+  string action = 12;
+  map<string, string> metadata = 13;
+  map<string, string> changes = 14; // For UPDATE events: before/after
+  string request_id = 15;
+  int64 timestamp = 16;
+  string location = 17;
+  bool is_anonymized = 18;
+  ComplianceStandard compliance_tags = 19;
+  string session_id = 20;
+}
+
+message AlertRule {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated EventType event_types = 5;
+  EventSeverity min_severity = 6;
+  string condition_expression = 7; // CEL expression for complex conditions
+  int32 threshold_count = 8;
+  string threshold_window = 9; // e.g., "5m", "1h"
+  repeated string notify_channels = 10; // email, slack, webhook
+  repeated string notify_recipients = 11;
+  bool is_active = 12;
+  int64 created_at = 13;
+  int64 updated_at = 14;
+  string created_by = 15;
+}
+
+message Alert {
+  string id = 1;
+  string rule_id = 2;
+  string rule_name = 3;
+  string tenant_id = 4;
+  repeated AuditEvent triggering_events = 5;
+  EventSeverity severity = 6;
+  string message = 7;
+  bool is_acknowledged = 8;
+  string acknowledged_by = 9;
+  int64 acknowledged_at = 10;
+  string acknowledgment_note = 11;
+  int64 created_at = 12;
+  map<string, string> context = 13;
+}
+
+message RetentionPolicy {
+  string tenant_id = 1;
+  int32 retention_days = 2;
+  bool auto_archive = 3;
+  string archive_location = 4; // S3 bucket path, etc.
+  bool enable_compression = 5;
+  bool enable_encryption = 6;
+  repeated ComplianceStandard compliance_requirements = 7;
+  int64 created_at = 8;
+  int64 updated_at = 9;
+}
+
+message LogEventRequest {
+  string tenant_id = 1;
+  EventType event_type = 2;
+  EventSeverity severity = 3;
+  string actor_id = 4;
+  string actor_name = 5;
+  string actor_role = 6;
+  string actor_ip = 7;
+  string user_agent = 8;
+  string resource_type = 9;
+  string resource_id = 10;
+  string action = 11;
+  map<string, string> metadata = 12;
+  map<string, string> changes = 13;
+  string session_id = 14;
+  repeated ComplianceStandard compliance_tags = 15;
+}
+
+message GetEventsRequest {
+  string tenant_id = 1;
+  repeated EventType event_types = 2;
+  repeated EventSeverity severities = 3;
+  string actor_id = 4;
+  string resource_type = 5;
+  string resource_id = 6;
+  int64 start_time = 7;
+  int64 end_time = 8;
+  string search_query = 9;
+  string sort_by = 10; // timestamp, severity
+  string sort_order = 11; // asc, desc
+  int32 page = 12;
+  int32 page_size = 13;
+}
+
+message GetEventRequest {
+  string event_id = 1;
+}
+
+message GetResourceTrailRequest {
+  string resource_type = 1;
+  string resource_id = 2;
+  string tenant_id = 3;
+  int64 start_time = 4;
+  int64 end_time = 5;
+}
+
+message GetUserTrailRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  int64 start_time = 3;
+  int64 end_time = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+
+message GetTenantTrailRequest {
+  string tenant_id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  repeated EventType event_types = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+
+message ExportLogsRequest {
+  string tenant_id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  repeated EventType event_types = 4;
+  string format = 5; // json, csv, pdf
+  ComplianceStandard compliance_standard = 6;
+  bool include_metadata = 7;
+  bool anonymize_pii = 8;
+  string destination = 9; // S3 URL, email, etc.
+}
+
+message ExportResponse {
+  string export_id = 1;
+  string status = 2; // pending, processing, completed, failed
+  string download_url = 3;
+  int64 record_count = 4;
+  int64 file_size_bytes = 5;
+  int64 created_at = 6;
+  int64 expires_at = 7;
+  string error_message = 8;
+}
+
+message GetStatsRequest {
+  string tenant_id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  string group_by = 4; // event_type, severity, actor, day
+}
+
+message StatsResponse {
+  int64 total_events = 1;
+  map<string, int64> events_by_type = 2;
+  map<string, int64> events_by_severity = 3;
+  map<string, int64> events_by_actor = 4;
+  map<string, int64> events_by_day = 5;
+  int64 unique_actors = 6;
+  int64 unique_resources = 7;
+  double events_per_hour_avg = 8;
+  int64 security_violations = 9;
+  int64 compliance_checks_passed = 10;
+  int64 compliance_checks_failed = 11;
+}
+
+message SearchLogsRequest {
+  string tenant_id = 1;
+  string query = 2; // Full-text search query
+  repeated string fields = 3; // Fields to search in
+  int64 start_time = 4;
+  int64 end_time = 5;
+  int32 page = 6;
+  int32 page_size = 7;
+}
+
+message SetRetentionPolicyRequest {
+  string tenant_id = 1;
+  int32 retention_days = 2;
+  bool auto_archive = 3;
+  string archive_location = 4;
+  bool enable_compression = 5;
+  bool enable_encryption = 6;
+  repeated ComplianceStandard compliance_requirements = 7;
+}
+
+message GetRetentionPolicyRequest {
+  string tenant_id = 1;
+}
+
+message RetentionPolicyResponse {
+  RetentionPolicy policy = 1;
+}
+
+message ArchiveLogsRequest {
+  string tenant_id = 1;
+  int64 cutoff_time = 2;
+  string destination = 3;
+  bool delete_after_archive = 4;
+}
+
+message ArchiveResponse {
+  string archive_id = 1;
+  string status = 2;
+  int64 records_archived = 3;
+  int64 archive_size_bytes = 4;
+  string archive_location = 5;
+  int64 created_at = 6;
+  string error_message = 7;
+}
+
+message CreateAlertRuleRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated EventType event_types = 4;
+  EventSeverity min_severity = 5;
+  string condition_expression = 6;
+  int32 threshold_count = 7;
+  string threshold_window = 8;
+  repeated string notify_channels = 9;
+  repeated string notify_recipients = 10;
+}
+
+message ListAlertRulesRequest {
+  string tenant_id = 1;
+  bool active_only = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message UpdateAlertRuleRequest {
+  string rule_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated EventType event_types = 4;
+  EventSeverity min_severity = 5;
+  string condition_expression = 6;
+  int32 threshold_count = 7;
+  string threshold_window = 8;
+  repeated string notify_channels = 9;
+  repeated string notify_recipients = 10;
+  bool is_active = 11;
+}
+
+message DeleteAlertRuleRequest {
+  string rule_id = 1;
+}
+
+message GetAlertsRequest {
+  string tenant_id = 1;
+  bool include_acknowledged = 2;
+  EventSeverity min_severity = 3;
+  int64 start_time = 4;
+  int64 end_time = 5;
+  int32 page = 6;
+  int32 page_size = 7;
+}
+
+message GetAlertsResponse {
+  repeated Alert alerts = 1;
+  int32 total_count = 2;
+  int32 unacknowledged_count = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message AcknowledgeAlertRequest {
+  string alert_id = 1;
+  string acknowledged_by = 2;
+  string note = 3;
+}
+
+message AlertResponse {
+  Alert alert = 1;
+}
+
+message AlertRuleResponse {
+  AlertRule rule = 1;
+}
+
+message ListAlertRulesResponse {
+  repeated AlertRule rules = 1;
+  int32 total_count = 2;
+  int32 active_count = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message GetComplianceReportRequest {
+  string tenant_id = 1;
+  string report_type = 2; // gdpr_access, hipaa_audit, soc2_controls, etc.
+  int64 start_time = 3;
+  int64 end_time = 4;
+  string format = 5;
+}
+
+message ComplianceReportResponse {
+  string report_id = 1;
+  string report_type = 2;
+  ComplianceStandard standard = 3;
+  string status = 4;
+  string download_url = 5;
+  int64 generated_at = 6;
+  int64 period_start = 7;
+  int64 period_end = 8;
+  map<string, string> findings = 9;
+  int32 controls_passed = 10;
+  int32 controls_failed = 11;
+  string summary = 12;
+}
+
+message EventResponse {
+  AuditEvent event = 1;
+}
+
+message GetEventsResponse {
+  repeated AuditEvent events = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message EmptyResponse {}
